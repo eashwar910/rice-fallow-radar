@@ -10,7 +10,7 @@ The only things that are genuinely fixed are external: university deadlines, the
 
 ## What this project is
 
-**Paira Window** — Final Year Project (COMP3025 Individual Dissertation, 2026/27), supervised by Dr. Tissa Chandesa.
+**Rice Fallow Radar** — Final Year Project (COMP3025 Individual Dissertation, 2026/27), supervised by Dr. Tissa Chandesa.
 
 Title: *Forecasting When Each Field Can Be Sown: Transferable, Explainable Machine Learning on Satellite Time Series for India's Rice Fallows.*
 

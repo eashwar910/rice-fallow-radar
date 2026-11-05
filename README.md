@@ -1,4 +1,4 @@
-# Paira Window
+# Rice Fallow Radar
 
 **Forecasting when each field can be sown: transferable, explainable machine learning on satellite time series for India's rice fallows.**
 

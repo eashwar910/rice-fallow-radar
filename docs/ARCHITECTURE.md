@@ -56,14 +56,14 @@ The proposal's Figure 1 shows the same pipeline grouped by objective (O1: M1+M2;
 ## Suggested repository layout
 
 ```text
-paira-window/
+rice-fallow-radar/
 ├── CLAUDE.md
 ├── README.md
 ├── docs/                    project docs (this folder)
 ├── configs/                 districts, horizons, thresholds, pinned dataset versions
 ├── data/                    git-ignored; raw/, interim/, features/, labels/
 ├── notebooks/               exploration only; anything reused moves into src/
-├── src/paira/
+├── src/rice_fallow_radar/
 │   ├── ingest/              earth_engine.py, nisar.py, sickle.py, ftw.py, agrifieldnet.py
 │   ├── registry/            fields.py, qa.py, rice_mask.py
 │   ├── features/            build.py, as_of.py, s1.py, s2.py, weather.py, moisture.py
