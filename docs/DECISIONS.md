@@ -68,3 +68,18 @@ Format: date · decision · why · what would change it.
 ## New decisions
 
 _Add below as the project moves._
+
+### D-014 · 5 Nov 2026 · Environment: uv + Python 3.12, deps added per phase
+**Decision:** `uv` with `uv.lock` for a pinned, reproducible env; Python 3.12; ruff + pre-commit; GitHub Actions runs lint + pytest. Only P0/P1 dependencies installed now; ML libraries are added in the phase that first needs them.
+**Why:** one lockfile gives exact reproducibility for the dissertation; 3.12 has wheels for every planned library (3.13/3.14 support for geo/ML stacks is less certain); small env keeps CI fast.
+**Revisit if:** a needed library lacks 3.12 wheels on Apple Silicon or Colab forces a different version.
+
+### D-015 · 5 Nov 2026 · Earth Engine Community tier
+**Decision:** register the GEE noncommercial project on the Community tier (150 EECU-hours/month, no billing account).
+**Why:** matches undergraduate eligibility; per-field table exports should fit; avoids attaching a billing account on an RM0–100 budget.
+**Revisit if:** the step-5 pilot extrapolates to >150 EECU-h/month after cutting time span and caching exports → consider Contributor tier.
+
+### D-016 · 10 Nov 2026 · Field unit: FTW polygons ≥ 0.1 ha (provisional), grid cells as fallback
+**Decision:** use FTW polygons of at least 0.1 ha (1000 m²) as the field unit for P1, with the valid-pixel count kept as a quality flag. Add a cropland filter in P1 (not yet chosen or tested) because the visual check found false polygons on non-field land.
+**Why:** the 12-cell visual check rated dense cells usable and sparse cells poor; fragmentation is severe (median 0.04 ha). The 0.1 ha cut matches SICKLE plot scale and keeps the EE cost at ~10 EECU-h/season, while still covering 60–70% of FTW area. Fixed grid cells are cheaper to trust but break the "per field" claim, so they are the fallback, not the default.
+**Revisit if:** P1 shows merged/split polygons blur harvest dates (e.g. within-polygon S1 variance is bimodal), or the cropland filter removes too much of Bolangir. The 12-cell sample is small, so re-rate more cells if the choice looks shaky.

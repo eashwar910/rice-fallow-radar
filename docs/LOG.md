@@ -15,3 +15,21 @@ Suggested shape per entry — use whatever is useful:
 
 - **Done:** proposal submitted (29 Oct). Repo docs created: CLAUDE.md, roadmap, architecture, models, data, evaluation, decisions, open questions, glossary.
 - **Next:** P0 setup — environment, Earth Engine project, Earthdata login, SICKLE download; ethics application due 12 Nov. First look at FTW polygon quality in the study districts.
+- **Done (P0):** GEE noncommercial project (Community tier), NASA Earthdata login, SICKLE access form, GitHub repo. Repo scaffold: uv/Python 3.12 env with lockfile, ruff + pre-commit, pytest smoke tests, GitHub Actions CI, `configs/districts.yaml`, Makefile (D-014, D-015).
+- **Learned:** SICKLE phenology/yield labels exist for only 351 paddy samples from 145 plots (not 388 plots); test split withheld (authors said "working on hosting" Oct 2024, no update since); plot coordinates withheld for privacy; labels from farmer recall in 2021–22 surveys; no dataset licence published. Email to authors drafted (test set, coordinates, S1 pre-processing, terms).
+- **Next:** authenticate GEE + Earthdata locally, then GEE smoke test and EECU cost pilot (step 5).
+
+## 2026-11-06
+
+- **Done (P0):** GEE service-account auth (browser OAuth was blocked); district boundaries switched to FAO GAUL 2025; Earthdata login; NISAR coverage + one granule inspected; FTW polygons for both districts downloaded (`ingest/ftw.py`); SICKLE downloaded and profiled. All findings in `DATA.md`.
+- **Learned:** usable SICKLE labels are 319 seasons / 131 plots / 2 years (588 more are recalled "typical" dates). FTW polygons look heavily fragmented (median ~0.04 ha) and carry no confidence in India. S1 passes ~every 12 days. NISAR: none before Oct 2025, ~36% valid cells over Bolangir, uncertainty ~0.04 m³/m³.
+- **Blocked → resolved (later 6 Nov):** EE cost pilot rerun with a Drive export. The write failed (service accounts have no Drive quota), but EECU was reported: S1 ≈ 10 EECU-h/season for both districts; CHIRPS per field ~300 h/season → sample coarse rasters per pixel. Asset root still not visible to the SA even after opening the Code Editor.
+- **Next:** visual FTW check (step 8), EECU pilot rerun, decide field unit if FTW fails.
+- **Done (P0 step 7, redo):** `scripts/sickle_profile.py` now reproduces the SICKLE profile. Corrected earlier notes: the test split is empty, not just unlabelled, and the masks have only 3m/10m/30m folders.
+- **Learned:** exact and rough labels come from disjoint plot sets. Masks contain neighbouring plots, and 137/319 exact samples share a patch with a plot from the other official split (spatial leakage). Patches extend ~2 scenes past harvest. Authors' harvest-date runs: S1 UNet3D 8.7 d val MAE (an optimistic hindcast). The may-sep season has a much tighter spread (sd 6–8 d) than sep-feb (15–17 d).
+
+## 2026-11-10
+
+- **Done (P0 step 8):** Eashwar rated the 12 FTW sample cells. Verdict written to `DATA.md` §FTW; field-unit decision D-016.
+- **Learned:** ratings were 1 good / 4 usable / 2 usable-poor / 4 poor / 1 can't tell; over-split and missed fields were the most common flags, and sparse cells hold false polygons. ≥ 0.1 ha keeps 60–70% of FTW area but only 19–24% of polygons.
+- **Next:** decide SICKLE grouped-split (record in `DECISIONS.md`) and the EE export route (`computeFeatures` vs fixing IAM); ethics due 12 Nov; reproducibility paragraph; commit the P0 scaffold.

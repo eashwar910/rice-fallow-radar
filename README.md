@@ -43,4 +43,13 @@ Early development (November 2026). See [`docs/ROADMAP.md`](docs/ROADMAP.md) for 
 
 ## Setup
 
-_To be filled in once the environment is pinned._ Expected: Python 3.11+, an Earth Engine noncommercial project, and NASA Earthdata credentials for NISAR/SMAP.
+Requires [uv](https://docs.astral.sh/uv/), an Earth Engine noncommercial project, and NASA Earthdata credentials (NISAR/SMAP).
+
+```bash
+make setup                      # uv sync (Python 3.12, from uv.lock) + pre-commit hooks
+uv run earthengine authenticate # one-off, opens a browser
+uv run python -c "import earthaccess; earthaccess.login(persist=True)"  # one-off, writes ~/.netrc
+make test                       # also: make lint, make fmt
+```
+
+Data lives in `data/` and is git-ignored.

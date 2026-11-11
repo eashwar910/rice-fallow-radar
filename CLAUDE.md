@@ -43,6 +43,18 @@ The supervisor's main critique of earlier drafts was that it read like agronomy.
 
 Source of truth for *claims made to the university* is the submitted proposal (`TC_20717304_proposal.pdf`). These docs elaborate on it; where they disagree, the proposal says what was promised and the docs say what we now think.
 
+## Obsidian vault
+
+Everything logged to my Obsidian vault for this repo goes under the project **`rice-fallow-radar`**, and nowhere else (not under `FYP-research-run`, which is the earlier topic-discovery pipeline, and not under any other project).
+
+- **Vault:** `$OBSIDIAN_VAULT_PATH`. Read its `_CLAUDE.md` first; it governs note format (AI-first rules: `## For future agent` preamble, rich frontmatter, `[[wikilinks]]`, dated claims).
+- **Project note (the home, update its Recent Activity and status):** `Projects/rice-fallow-radar/rice-fallow-radar.md`, linked as `[[rice-fallow-radar]]`.
+- **Dev logs:** `Logs/YYYY-MM-DD <Title>.md`, `type: devlog`, `project: "[[rice-fallow-radar]]"`. One per work session or day. Link each from the project note's Recent Activity and from that day's `Daily/YYYY-MM-DD.md` Work section. `/obsidian-log` does all three.
+- **People:** `People/<Full Name>.md` (supervisor: `[[Tissa Chandesa]]`; SICKLE contact: `[[Depanshu Sani]]`).
+- **Division of labour:** the repo's `docs/` (`DATA.md`, `DECISIONS.md`, `LOG.md`, `ROADMAP.md`) stay the plan and the record of facts and decisions; the vault holds session-level dev logs, dated findings, and cross-project links. Don't duplicate whole docs into the vault. A fact goes in `docs/DATA.md` first and is summarised in the project note with a date.
+- **Never write secrets into the vault or the repo:** Earth Engine key (`~/.config/earthengine/rfr-sa.json`), Earthdata credentials (`~/.netrc`).
+- **Session history:** past Claude Code transcripts for this repo live in `~/.claude/projects/-Users-eashwarsiddha-Documents-UoNM-Year3-FYP-rice-fallow-radar/*.jsonl`. They are not loaded automatically; sessions up to 2026-11-10 are already backfilled as dev logs in the vault.
+
 ## How I'd like Claude to work with me
 
 These are preferences, not constraints.

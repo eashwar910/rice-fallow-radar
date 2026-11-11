@@ -69,6 +69,20 @@ The critical path runs P1 → P2 → P3 → P5 → P6. M3 and M4 (P4) are extens
 
 **Useful output for the dissertation:** a short "environment and reproducibility" paragraph.
 
+### P0 step tracker (agreed 5 Nov 2026; status as of 6 Nov)
+
+| # | Who | Step | Status | Notes / where to pick up |
+|---|---|---|---|---|
+| 1 | Eashwar (Claude drafts) | Ethics application | Pending — due 12 Nov | Eashwar handling week of 9 Nov |
+| 2 | Eashwar | Accounts: GEE noncommercial project, Earthdata, SICKLE form, GitHub repo | ✅ Done | GEE project `rice-fallow-radar`, Community tier (D-015). SICKLE email to authors drafted (licence, test set, coordinates) |
+| 3 | Claude | Repo scaffold (uv/Py 3.12, ruff, pre-commit, pytest, CI, Makefile, configs) | ✅ Done, **not yet committed/pushed** | D-014. CI hasn't run on GitHub yet |
+| 4 | Eashwar | Local auth | ✅ Done | Browser OAuth blocked → GEE uses service account `rfr-earthengine` (key at `~/.config/earthengine/rfr-sa.json`, loaded by `ingest/earth_engine.init()`). Earthdata creds in `~/.netrc` |
+| 5 | Claude | GEE smoke test + EECU cost pilot | ✅ Done (cost measured; export destination open) | Pilot measured EECU (tasks failed only at write: SA has no Drive quota). S1 ≈ 10 EECU-h/season for both districts; CHIRPS per-field is ~300 h → must sample per coarse pixel. Asset root still not writable by SA → use `computeFeatures` pulls in P1 or fix IAM. See DATA.md §Earth Engine compute |
+| 6 | Claude | Earthdata / NISAR check | ✅ Done | See DATA.md §NISAR: no data before Oct 2025; ~36% valid cells, uncertainty ~0.04 m³/m³ |
+| 7 | Eashwar → Claude | SICKLE download + inspection | ✅ Done (licence pending from authors) | `scripts/sickle_profile.py` reproduces DATA.md §SICKLE. 319 exact labels / 131 plots / 2019–20; test split empty; patches run past harvest (truncate at `as_of`); official split leaks spatially (137/319) → propose neighbour-graph grouped split; authors' S1 hindcast 8.7 d MAE |
+| 8 | Claude → Eashwar | FTW quality check (stats + sample map; Eashwar eyeballs) | ✅ Done (provisional unit: D-016) | Stats: median ~0.04 ha, no confidence in India. `scripts/ftw_sample_map.py` → `data/interim/ftw_check/index.html` (12 cells, 6 per district). Eashwar's ratings: 1 good, 4 usable, 2 usable/poor, 4 poor, 1 can't tell. Verdict + filter in DATA.md §FTW and D-016 |
+| 9 | Claude | Docs: LOG, DATA, DECISIONS, reproducibility paragraph | Ongoing | Reproducibility paragraph not yet drafted |
+
 ## P1 — Data pipeline and field registry (5–25 Nov)
 
 **Goal:** for any set of fields and any `as_of` date, produce a clean feature table using only data that existed on that date.
@@ -164,7 +178,7 @@ Any of these should be noted in `DECISIONS.md` and acknowledged as a limitation.
 
 | Phase | Status | Notes |
 |---|---|---|
-| P0 Setup | Not started | |
+| P0 Setup | In progress | See P0 step tracker |
 | P1 Pipeline | Not started | |
 | P1b Odisha labels | Not started | |
 | P2 M1 | Not started | |
