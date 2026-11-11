@@ -1,0 +1,20 @@
+# Study districts. Boundaries come from FAO GAUL 2025 in Earth Engine (2015 version is deprecated).
+# Names verified against the asset on 6 Nov 2026 (GEE areas: Bolangir 6565 km2, Baleswar 3729 km2).
+boundaries:
+  gee_asset: FAO/GAUL/2025/level2
+  country_field: GAUL0_NAME
+  state_field: GAUL1_NAME
+  district_field: GAUL2_NAME
+
+districts:
+  bolangir:
+    state: Odisha
+    gaul_name: Bolangir (Balangir)
+    note: western uplands, dry edge dominates
+  baleswar:
+    state: Odisha
+    gaul_name: Balasore (Baleshwar)
+    note: coastal plain, wet edge dominates
+
+# M1 forecast horizons, days before harvest
+horizons_days: [7, 14, 21]

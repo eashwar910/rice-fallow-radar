@@ -1,0 +1,36 @@
+[project]
+name = "rice-fallow-radar"
+version = "0.1.0"
+description = "Forecasting when each rice-fallow field can be sown: transferable, explainable ML on satellite time series."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+# P0/P1 needs only. ML deps (lightgbm, torch, shap, streamlit) get added in the phase that uses them.
+dependencies = [
+    "earthengine-api",
+    "earthaccess",
+    "numpy",
+    "pandas",
+    "pyarrow",
+    "geopandas",
+    "rasterio",
+    "pyyaml",
+    "duckdb>=2.0.0",
+    "h5py>=3.16.0",
+]
+
+[dependency-groups]
+dev = ["pytest", "ruff", "pre-commit", "ipykernel"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

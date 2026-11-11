@@ -1,0 +1,24 @@
+# data and outputs stay local (see docs/ARCHITECTURE.md)
+data/
+runs/
+
+# SICKLE (authors' release, access-controlled, no public licence: never commit)
+sickle_dataset/
+sickle_toy_dataset/
+mlruns/
+*.parquet
+*.tif
+*.npz
+*.zip
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# secrets / os
+.env
+.DS_Store
