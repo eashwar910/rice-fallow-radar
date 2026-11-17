@@ -101,3 +101,8 @@ _Add below as the project moves._
 **Why:** the 2026–27 replay is only a fair test if nothing was tuned on that season. A hard guard is easier to defend than "I promise I didn't look", and it means the freeze date (30 Nov) can slip without contaminating the replay.
 **Cost to know about:** bugs that only appear on newer data (e.g. new Sentinel-1 satellites, a new product version) will surface at replay time, not earlier. With no 2026–27 hand labels (D-018), the protocol must state that replay harvest "truth" comes from the radar harvest detector, validated on past-season labels.
 **Revisit if:** a pipeline bug needs 2026–27 data to reproduce; then document the exception in LOG.md and touch only raw inputs, never model outputs.
+
+### D-020 · 17 Nov 2026 · No land-cover filter on FTW; keep WorldCover cropland fraction as a flag
+**Decision:** don't drop FTW polygons with a land-cover map. Keep the ≥ 0.1 ha cut (D-016), store each polygon's ESA WorldCover 2021 cropland fraction as a quality column (like the valid-pixel count), and let the rice mask (open question #8) remove the remaining non-fields.
+**Why:** blind per-polygon ratings of 205 polygons ≥ 0.1 ha (DATA.md §FTW) found only 5 false polygons (~2–3%). Every filter tested threw away more real fields than fakes it caught: WorldCover < 0.5 drops 14/194 real fields to catch 4/5 fakes; Dynamic World is worse (23–29 real fields lost at thresholds that catch 4 fakes). Roads and trees won't show a rice radar signature, so the rice mask should catch what's left.
+**Revisit if:** the rice mask lets non-fields through (check on the P1b labels), or a larger rating sample shows more fakes than 2–3%.

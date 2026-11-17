@@ -13,9 +13,7 @@ Things that aren't settled. Some need an answer soon; some are just worth thinki
 4. ~~**How does the protocol freeze interact with pipeline development?**~~ *Answered 17 Nov (D-019):* strict. Code refuses dates ≥ 1 Jun 2026 until `protocol-v1` is tagged.
 5. ~~**Earth Engine compute budget.**~~ *Answered 6/13 Nov:* Community tier is enough (S1 ≈ 10 EECU-h per season for both districts); pull route is `computeFeatures` (D-017).
 6. ~~**Exam and winter-break dates**~~ *Closed 17 Nov:* Eashwar: not needed; internal dates aren't binding.
-7. **Cropland filter for FTW** (added 17 Nov). D-016 needs one; none chosen or tested. Candidates: ESA WorldCover 2021 (10 m, "cropland" class), Dynamic World (10 m, near-real-time, per-date class probabilities), or a radar rule (a flooded-then-growing VH signature also gives the rice mask, see 8). Test on the 12 rated FTW cells: does it remove the false polygons Eashwar flagged without dropping real fields?
-
--
+7. ~~**Cropland filter for FTW**~~ *Answered 17 Nov (D-020):* no land-cover filter. After the 0.1 ha cut only ~2–3% of polygons are false, and WorldCover/Dynamic World drop more real fields than fakes. WorldCover fraction kept as a quality column; the rice mask (8) does the filtering.
 8. **Rice mask** (added 17 Nov). Which polygons were kharif rice in a given year. Options: an S1 rule (VH dip at transplanting flood, then rise), an existing product if one covers Odisha at field scale (not yet checked), or a small classifier trained on hand-checked polygons. Needs its own accuracy check against the P1b labels.
 
 -
