@@ -67,21 +67,23 @@ The critical path runs P1 → P2 → P3 → P5 → P6. M3 and M4 (P4) are extens
 - Download SICKLE; confirm what's actually in it (plot count, which dates, which sensors, licence).
 - Ethics application submitted (12 Nov).
 
-**Useful output for the dissertation:** a short "environment and reproducibility" paragraph.
+**Useful output for the dissertation:** a short "environment and reproducibility" paragraph. Draft (13 Nov 2026; update the data-version details as P1 lands):
+
+> All code is in a version-controlled repository. The Python environment (3.12) is managed with `uv` and pinned by a lockfile, so `uv sync` rebuilds the exact package versions used for every reported result. Formatting and lint checks (ruff) run as pre-commit hooks, and a GitHub Actions workflow runs the same checks plus the test suite on every push. Study areas, field filters and other settings live in versioned config files rather than in code. Heavy raster processing runs in Google Earth Engine (noncommercial Community tier) and per-field tables are pulled to local disk; every external dataset is recorded with the date its availability and processing level were checked. Credentials (Earth Engine service-account key, NASA Earthdata login) are kept outside the repository. Reported results are tied to git tags (`protocol-v1`, model freeze), so each figure can be traced to the code and configuration that produced it.
 
 ### P0 step tracker (agreed 5 Nov 2026; status as of 6 Nov)
 
 | # | Who | Step | Status | Notes / where to pick up |
 |---|---|---|---|---|
-| 1 | Eashwar (Claude drafts) | Ethics application | Pending — due 12 Nov | Eashwar handling week of 9 Nov |
+| 1 | Eashwar (Claude drafts) | Ethics application | ✅ Done (13 Nov) | Submitted by the 12 Nov deadline |
 | 2 | Eashwar | Accounts: GEE noncommercial project, Earthdata, SICKLE form, GitHub repo | ✅ Done | GEE project `rice-fallow-radar`, Community tier (D-015). SICKLE email to authors drafted (licence, test set, coordinates) |
-| 3 | Claude | Repo scaffold (uv/Py 3.12, ruff, pre-commit, pytest, CI, Makefile, configs) | ✅ Done, **not yet committed/pushed** | D-014. CI hasn't run on GitHub yet |
+| 3 | Claude | Repo scaffold (uv/Py 3.12, ruff, pre-commit, pytest, CI, Makefile, configs) | ✅ Done, committed and pushed | D-014. CI green on `main` (11 Nov) |
 | 4 | Eashwar | Local auth | ✅ Done | Browser OAuth blocked → GEE uses service account `rfr-earthengine` (key at `~/.config/earthengine/rfr-sa.json`, loaded by `ingest/earth_engine.init()`). Earthdata creds in `~/.netrc` |
 | 5 | Claude | GEE smoke test + EECU cost pilot | ✅ Done (cost measured; export destination open) | Pilot measured EECU (tasks failed only at write: SA has no Drive quota). S1 ≈ 10 EECU-h/season for both districts; CHIRPS per-field is ~300 h → must sample per coarse pixel. Asset root still not writable by SA → use `computeFeatures` pulls in P1 or fix IAM. See DATA.md §Earth Engine compute |
 | 6 | Claude | Earthdata / NISAR check | ✅ Done | See DATA.md §NISAR: no data before Oct 2025; ~36% valid cells, uncertainty ~0.04 m³/m³ |
 | 7 | Eashwar → Claude | SICKLE download + inspection | ✅ Done (licence pending from authors) | `scripts/sickle_profile.py` reproduces DATA.md §SICKLE. 319 exact labels / 131 plots / 2019–20; test split empty; patches run past harvest (truncate at `as_of`); official split leaks spatially (137/319) → propose neighbour-graph grouped split; authors' S1 hindcast 8.7 d MAE |
 | 8 | Claude → Eashwar | FTW quality check (stats + sample map; Eashwar eyeballs) | ✅ Done (provisional unit: D-016) | Stats: median ~0.04 ha, no confidence in India. `scripts/ftw_sample_map.py` → `data/interim/ftw_check/index.html` (12 cells, 6 per district). Eashwar's ratings: 1 good, 4 usable, 2 usable/poor, 4 poor, 1 can't tell. Verdict + filter in DATA.md §FTW and D-016 |
-| 9 | Claude | Docs: LOG, DATA, DECISIONS, reproducibility paragraph | Ongoing | Reproducibility paragraph not yet drafted |
+| 9 | Claude | Docs: LOG, DATA, DECISIONS, reproducibility paragraph | ✅ Done | Reproducibility paragraph drafted above (13 Nov); EE export route in D-017 |
 
 ## P1 — Data pipeline and field registry (5–25 Nov)
 
@@ -178,7 +180,7 @@ Any of these should be noted in `DECISIONS.md` and acknowledged as a limitation.
 
 | Phase | Status | Notes |
 |---|---|---|
-| P0 Setup | In progress | See P0 step tracker |
+| P0 Setup | ✅ Done (13 Nov) | See P0 step tracker |
 | P1 Pipeline | Not started | |
 | P1b Odisha labels | Not started | |
 | P2 M1 | Not started | |

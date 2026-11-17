@@ -33,3 +33,9 @@ Suggested shape per entry — use whatever is useful:
 - **Done (P0 step 8):** Eashwar rated the 12 FTW sample cells. Verdict written to `DATA.md` §FTW; field-unit decision D-016.
 - **Learned:** ratings were 1 good / 4 usable / 2 usable-poor / 4 poor / 1 can't tell; over-split and missed fields were the most common flags, and sparse cells hold false polygons. ≥ 0.1 ha keeps 60–70% of FTW area but only 19–24% of polygons.
 - **Next:** decide SICKLE grouped-split (record in `DECISIONS.md`) and the EE export route (`computeFeatures` vs fixing IAM); ethics due 12 Nov; reproducibility paragraph; commit the P0 scaffold.
+
+## 2026-11-13
+
+- **Done (P0 close-out):** ethics submitted (by 12 Nov). Reproducibility paragraph drafted (ROADMAP §P0). EE export route decided: D-017. Tracker rows for repo scaffold and docs corrected (scaffold was already committed, CI green).
+- **Learned:** `computeFeatures` works on the service account. 950 fields × 20 S1 scenes = 19,000 rows in 364 s, linear in scenes. Full-district S1 for one season is ~50+ h serial, so the P1 pull must run requests in parallel and cache chunks.
+- **Next:** SICKLE grouped-split decision (D-018), then P1 field registry + `build_features`.
