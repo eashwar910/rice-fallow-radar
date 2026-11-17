@@ -95,3 +95,9 @@ _Add below as the project moves._
 **Why:** a quick check in Copernicus Browser (17 Nov) showed that a non-expert can see the green → brown change. Visual labelling of imagery is the standard way remote-sensing studies make reference data (Olofsson et al., 2014). Semester 2 time goes to development, so a second labelling session in January isn't planned.
 **Cost to know about:** the 2026–27 replay has no Odisha hand labels, so replay harvest accuracy can only be checked against the radar harvest detector (itself validated on these past-season labels). That's weaker, and the dissertation should say so. Label precision is ~±5 days (S2 revisit plus cloud), which sets a floor on the Odisha errors we can claim.
 **Revisit (Jan 2027):** if time allows, add ~50 2026–27 fields for the replay (Option C).
+
+### D-019 · 17 Nov 2026 · No 2026–27 data before the protocol freeze, enforced in code
+**Decision:** until `protocol-v1` is tagged, the pipeline refuses any date on or after **1 Jun 2026** (start of the 2026–27 kharif season). The cut-off lives in config and is checked in `build_features` and the ingest pulls; it can only be lifted by an explicit replay mode after the freeze. All P1/P2 development uses 2024–25 and 2025–26.
+**Why:** the 2026–27 replay is only a fair test if nothing was tuned on that season. A hard guard is easier to defend than "I promise I didn't look", and it means the freeze date (30 Nov) can slip without contaminating the replay.
+**Cost to know about:** bugs that only appear on newer data (e.g. new Sentinel-1 satellites, a new product version) will surface at replay time, not earlier. With no 2026–27 hand labels (D-018), the protocol must state that replay harvest "truth" comes from the radar harvest detector, validated on past-season labels.
+**Revisit if:** a pipeline bug needs 2026–27 data to reproduce; then document the exception in LOG.md and touch only raw inputs, never model outputs.

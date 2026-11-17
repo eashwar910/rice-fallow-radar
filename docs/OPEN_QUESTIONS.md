@@ -10,11 +10,7 @@ Things that aren't settled. Some need an answer soon; some are just worth thinki
 2. ~~**What exactly is in SICKLE?**~~ *Answered 6 Nov* (DATA.md §SICKLE): 319 exact labels / 131 plots / 2019–20; test split empty; coordinates withheld. Licence still open (see 10).
 3. ~~**Which years should the Odisha hand labels cover?**~~ *Answered 17 Nov (D-018):* past seasons only (2025–26, some 2024–25), ~200 fields labelled by Eashwar. Reconsider adding 2026–27 for the replay in Jan 2027.
 
-4. **How does the protocol freeze interact with pipeline development?** P1 will naturally pull recent Sentinel-1 data over Odisha, which may include early 2026–27 passes. Decide whether pipeline debugging can touch post-Oct 2026 data (probably fine for plumbing, not for tuning) and write that into the protocol.
-
-- The idea is that, I keep the current year's data aside so I can simulate real time testing and see how good my model is so pick accordingly.
-
-
+4. ~~**How does the protocol freeze interact with pipeline development?**~~ *Answered 17 Nov (D-019):* strict. Code refuses dates ≥ 1 Jun 2026 until `protocol-v1` is tagged.
 5. ~~**Earth Engine compute budget.**~~ *Answered 6/13 Nov:* Community tier is enough (S1 ≈ 10 EECU-h per season for both districts); pull route is `computeFeatures` (D-017).
 6. ~~**Exam and winter-break dates**~~ *Closed 17 Nov:* Eashwar: not needed; internal dates aren't binding.
 7. **Cropland filter for FTW** (added 17 Nov). D-016 needs one; none chosen or tested. Candidates: ESA WorldCover 2021 (10 m, "cropland" class), Dynamic World (10 m, near-real-time, per-date class probabilities), or a radar rule (a flooded-then-growing VH signature also gives the rice mask, see 8). Test on the 12 rated FTW cells: does it remove the false polygons Eashwar flagged without dropping real fields?

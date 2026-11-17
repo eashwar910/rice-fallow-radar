@@ -47,4 +47,5 @@ Suggested shape per entry — use whatever is useful:
 - **Learned:** SICKLE's withheld coordinates also block per-plot weather, not just spatial blocking. Weather for SICKLE will likely be regional (OPEN_QUESTIONS #11).
 - **Changed:** Eashwar: internal ROADMAP dates are formalities; do the full P1, no S1+CHIRPS-only shortcut. Open questions list updated (#1, #2, #5 answered; #7–12 added: cropland filter, rice mask, SICKLE split, licence, SICKLE weather, rough labels).
 - **Decided:** D-018, Odisha hand labels: past seasons only, ~200 fields, labelled by Eashwar (Copernicus Browser check showed the green → brown change is visible). 2026–27 labels reconsidered in Jan 2027.
-- **Next:** go through open questions #4, #7–12 one at a time, then P1.
+- **Decided:** D-019, no 2026–27 data before the protocol freeze, enforced by a date cut-off (1 Jun 2026) in code.
+- **Next:** go through open questions #7–12 one at a time, then P1.
