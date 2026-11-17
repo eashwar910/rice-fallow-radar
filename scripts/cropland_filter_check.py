@@ -55,7 +55,9 @@ for district, grp in cells.groupby("district"):
         frames.append(sub)
         print(c.cell_id, len(sub), "polygons")
 
+# largest first, so small polygons (often overlapped by big ones) are drawn on top and stay clickable
 polys = gpd.GeoDataFrame(pd.concat(frames, ignore_index=True), crs="EPSG:4326")
+polys = polys.sort_values("ha", ascending=False, ignore_index=True)
 for col in ["wc_crop", "dw_crops", "dw_crop_flood"]:
     polys[col] = polys[col].astype(float).round(2)
 OUT.mkdir(parents=True, exist_ok=True)
@@ -84,6 +86,7 @@ n / p = next / previous cell, h = hide outlines.</p>
 <option value="dw_crop_flood">Dynamic World 2024: crops + flooded veg.</option></select></p>
 <div class="k" id="ramp" style="display:none">0<span style="background:#d73027"></span>
 <span style="background:#fee08b"></span><span style="background:#1a9850"></span>1</div>
+<button onclick="fill()">Mark all unrated as real field</button><br>
 <button onclick="dl()">Download ratings CSV</button>
 <p style="font-size:12px">Save it as <code>data/interim/cropland_check/polygon_ratings.csv</code>.
 Ratings also persist in this browser.</p>
@@ -110,6 +113,7 @@ function show(i){cur=(i+CELLS.length)%CELLS.length;const c=CELLS[cur],h=0.00225;
  document.querySelectorAll('.c').forEach((e,j)=>e.classList.toggle('on',j==cur));}
 document.getElementById('list').innerHTML=CELLS.map((c,i)=>`<div class="c" onclick="show(${i})"><b>${c.cell_id}</b>
  (your cell verdict: ${c.verdict}) ${P.features.filter(f=>f.properties.cell_id==c.cell_id).length} outlines</div>`).join('');
+function fill(){P.features.forEach(f=>{if(!rat[f.properties.id])rat[f.properties.id]='real';});save();layer.setStyle(sty);prog();}
 function dl(){const rows=['id,cell_id,ha,rating'].concat(P.features.map(f=>[f.properties.id,f.properties.cell_id,
  f.properties.ha,rat[f.properties.id]||''].join(',')));const a=document.createElement('a');
  a.href=URL.createObjectURL(new Blob([rows.join('\\n')],{type:'text/csv'}));a.download='polygon_ratings.csv';a.click();}
