@@ -6,6 +6,8 @@ Context for Claude (and any other collaborator) working in this repository.
 
 The only things that are genuinely fixed are external: university deadlines, the research questions and objectives as submitted (they can be reinterpreted or narrowed, with a note in the dissertation, but not silently replaced), and honest reporting of results.
 
+Commit and push as preferred when you think is necessary BUT NEVER ADD THE CO AUTHORED BY CLAUDE TAG
+
 ---
 
 ## What this project is
