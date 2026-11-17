@@ -45,5 +45,6 @@ Suggested shape per entry — use whatever is useful:
 - **Done:** P0 docs committed and pushed (`e426987`); P0 marked done in ROADMAP. Stock-take of data on hand vs. needed.
 - **Have:** SICKLE (labels + S1/S2/L8 patches), FTW polygons for both districts, one NISAR granule. **Still to pull (P1):** Odisha S1/S2 per field, CHIRPS, ERA5-Land, SMAP, NISAR series, AlphaEarth, AgriFieldNet, CSISA; Odisha hand labels to make.
 - **Learned:** SICKLE's withheld coordinates also block per-plot weather, not just spatial blocking. Weather for SICKLE will likely be regional (OPEN_QUESTIONS #11).
-- **Changed:** Eashwar: internal ROADMAP dates are formalities; do the full P1, no S1+CHIRPS-only shortcut. Open questions list updated (#1, #2, #5 answered; #7–12 added: cropland filter, rice mask, D-018 split, licence, SICKLE weather, rough labels).
-- **Next:** Eashwar's inputs (below), then P1.
+- **Changed:** Eashwar: internal ROADMAP dates are formalities; do the full P1, no S1+CHIRPS-only shortcut. Open questions list updated (#1, #2, #5 answered; #7–12 added: cropland filter, rice mask, SICKLE split, licence, SICKLE weather, rough labels).
+- **Decided:** D-018, Odisha hand labels: past seasons only, ~200 fields, labelled by Eashwar (Copernicus Browser check showed the green → brown change is visible). 2026–27 labels reconsidered in Jan 2027.
+- **Next:** go through open questions #4, #7–12 one at a time, then P1.
