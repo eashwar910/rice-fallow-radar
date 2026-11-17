@@ -52,4 +52,5 @@ Suggested shape per entry — use whatever is useful:
 - **Done:** literature search for the rice mask (DATA.md §Rice mask): ~53% of Odisha rice is direct-seeded; no open Odisha kharif labels; FARM-style rule → pseudo-label → classifier fits. Email sent to IRRI Odisha for ground truth (optional). **Decided:** D-021, hybrid rice mask.
 - **Changed:** Eashwar: no step may depend on a reply from outside people; replies are bonuses.
 - **Done:** checked AgriFieldNet (214 Odisha chips, all in southern Odisha, none in our districts; mostly fallow + some rice, season undocumented, probably rabi: M4 use only) and Open-SARice (2024 EE assets readable; 0/5 fakes mapped as rice; Baleswar 65–71% vs Bolangir 19–23% of real outlines mapped as rice).
-- **Next:** open questions #9–12; then P1.
+- **Done:** SICKLE neighbour groups (`scripts/sickle_neighbour_groups.py`): 131 exact plots → 43 groups, largest 9% of dates. **Decided:** D-022, neighbour-group CV + locked ~20% test.
+- **Next:** open questions #11–12; then P1.
