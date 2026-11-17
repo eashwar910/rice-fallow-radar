@@ -49,4 +49,6 @@ Suggested shape per entry — use whatever is useful:
 - **Decided:** D-018, Odisha hand labels: past seasons only, ~200 fields, labelled by Eashwar (Copernicus Browser check showed the green → brown change is visible). 2026–27 labels reconsidered in Jan 2027.
 - **Decided:** D-019, no 2026–27 data before the protocol freeze, enforced by a date cut-off (1 Jun 2026) in code.
 - **Done:** cropland filter check (`scripts/cropland_filter_check.py`): Eashwar rated 205 FTW polygons ≥ 0.1 ha blind; 194 real / 5 fake / 6 unsure. **Decided:** D-020, no land-cover filter; WorldCover fraction kept as a column.
-- **Next:** go through open questions #8–12 one at a time, then P1.
+- **Done:** literature search for the rice mask (DATA.md §Rice mask): ~53% of Odisha rice is direct-seeded; no open Odisha kharif labels; FARM-style rule → pseudo-label → classifier fits. Email sent to IRRI Odisha for ground truth (optional). **Decided:** D-021, hybrid rice mask.
+- **Changed:** Eashwar: no step may depend on a reply from outside people; replies are bonuses.
+- **Next:** check AgriFieldNet / Open-SARice-10 coverage; open questions #9–12; then P1.
