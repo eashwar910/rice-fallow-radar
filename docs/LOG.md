@@ -39,3 +39,11 @@ Suggested shape per entry — use whatever is useful:
 - **Done (P0 close-out):** ethics submitted (by 12 Nov). Reproducibility paragraph drafted (ROADMAP §P0). EE export route decided: D-017. Tracker rows for repo scaffold and docs corrected (scaffold was already committed, CI green).
 - **Learned:** `computeFeatures` works on the service account. 950 fields × 20 S1 scenes = 19,000 rows in 364 s, linear in scenes. Full-district S1 for one season is ~50+ h serial, so the P1 pull must run requests in parallel and cache chunks.
 - **Next:** SICKLE grouped-split decision (D-018), then P1 field registry + `build_features`.
+
+## 2026-11-17
+
+- **Done:** P0 docs committed and pushed (`e426987`); P0 marked done in ROADMAP. Stock-take of data on hand vs. needed.
+- **Have:** SICKLE (labels + S1/S2/L8 patches), FTW polygons for both districts, one NISAR granule. **Still to pull (P1):** Odisha S1/S2 per field, CHIRPS, ERA5-Land, SMAP, NISAR series, AlphaEarth, AgriFieldNet, CSISA; Odisha hand labels to make.
+- **Learned:** SICKLE's withheld coordinates also block per-plot weather, not just spatial blocking. Weather for SICKLE will likely be regional (OPEN_QUESTIONS #11).
+- **Changed:** Eashwar: internal ROADMAP dates are formalities; do the full P1, no S1+CHIRPS-only shortcut. Open questions list updated (#1, #2, #5 answered; #7–12 added: cropland filter, rice mask, D-018 split, licence, SICKLE weather, rough labels).
+- **Next:** Eashwar's inputs (below), then P1.

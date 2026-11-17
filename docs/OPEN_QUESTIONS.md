@@ -6,12 +6,18 @@ Things that aren't settled. Some need an answer soon; some are just worth thinki
 
 ## Needs an answer soon (P0–P1)
 
-1. **Is FTW usable in Bolangir and Baleswar?** Polygon quality on smallholder plots is the foundation of everything. Measure it in the first week.
-2. **What exactly is in SICKLE?** Plot count vs. labelled seasons (388 plots vs. ~351 paddy seasons reported), coordinate precision, licence for derived data, which sensors are included.
+1. ~~**Is FTW usable in Bolangir and Baleswar?**~~ *Answered 10 Nov:* partly. Dense cells usable, sparse cells contain false polygons. Field unit = FTW ≥ 0.1 ha (D-016), plus a cropland filter (see 7).
+2. ~~**What exactly is in SICKLE?**~~ *Answered 6 Nov* (DATA.md §SICKLE): 319 exact labels / 131 plots / 2019–20; test split empty; coordinates withheld. Licence still open (see 10).
 3. **Which years should the Odisha hand labels cover?** Past seasons (e.g., 2023–25) keep them clean for model selection; 2026–27 labels would serve the replay. Probably both, kept separate.
 4. **How does the protocol freeze interact with pipeline development?** P1 will naturally pull recent Sentinel-1 data over Odisha, which may include early 2026–27 passes. Decide whether pipeline debugging can touch post-Oct 2026 data (probably fine for plumbing, not for tuning) and write that into the protocol.
-5. **Earth Engine compute budget.** Which tier, and how many EECU-hours a full district-season export costs.
+5. ~~**Earth Engine compute budget.**~~ *Answered 6/13 Nov:* Community tier is enough (S1 ≈ 10 EECU-h per season for both districts); pull route is `computeFeatures` (D-017).
 6. **Exam and winter-break dates** — needed to make the Dec–Jan plan realistic.
+7. **Cropland filter for FTW** (added 17 Nov). D-016 needs one; none chosen or tested. Candidates: ESA WorldCover 2021 (10 m, "cropland" class), Dynamic World (10 m, near-real-time, per-date class probabilities), or a radar rule (a flooded-then-growing VH signature also gives the rice mask, see 8). Test on the 12 rated FTW cells: does it remove the false polygons Eashwar flagged without dropping real fields?
+8. **Rice mask** (added 17 Nov). Which polygons were kharif rice in a given year. Options: an S1 rule (VH dip at transplanting flood, then rise), an existing product if one covers Odisha at field scale (not yet checked), or a small classifier trained on hand-checked polygons. Needs its own accuracy check against the P1b labels.
+9. **SICKLE split (proposed D-018, not yet decided).** Grouped CV by connected components of the plot co-occurrence graph built from the masks (DATA.md §SICKLE). To check before deciding: how many components there are and how big the largest is. If one giant component swallows most plots, fall back to leave-one-year-out plus season grouping.
+10. **SICKLE licence and test set.** Email to authors drafted 5 Nov (licence, test set, coordinates, S1 pre-processing). Confirm it was sent; without a licence, derived data can't be redistributed (affects the "open benchmark" idea).
+11. **Weather for SICKLE plots without coordinates** (added 17 Nov). M1 is meant to use radar + weather, but SICKLE plot locations are withheld and the mask GeoTIFFs have their georeferencing stripped, so CHIRPS/ERA5 can't be sampled per plot. Options: (a) one regional weather series for the SICKLE study area (Cauvery delta, Tamil Nadu; exact extent to confirm from the paper); since CHIRPS is ~5 km and ERA5-Land ~9 km, per-plot weather would barely differ from regional anyway, so the loss may be small; (b) recover approximate locations by matching the S1 patches against the GEE `COPERNICUS/S1_GRD` scenes they came from (scene IDs are in the filenames), which would also give per-plot weather and true spatial blocks, but is fiddly and may conflict with the authors' privacy intent, so ask them first; (c) drop weather from M1 and add it in M2/M3 only, as an ablation. Leaning (a), with (b) only if the authors agree.
+12. **Use of the 588 "rough" SICKLE dates** (added 17 Nov). Typical recalled dates, not observations. Excluded from M1 training and evaluation for now; could be tried as weak labels (down-weighted) in an ablation.
 
 ## Method questions (worth experimenting on)
 
