@@ -51,4 +51,5 @@ Suggested shape per entry — use whatever is useful:
 - **Done:** cropland filter check (`scripts/cropland_filter_check.py`): Eashwar rated 205 FTW polygons ≥ 0.1 ha blind; 194 real / 5 fake / 6 unsure. **Decided:** D-020, no land-cover filter; WorldCover fraction kept as a column.
 - **Done:** literature search for the rice mask (DATA.md §Rice mask): ~53% of Odisha rice is direct-seeded; no open Odisha kharif labels; FARM-style rule → pseudo-label → classifier fits. Email sent to IRRI Odisha for ground truth (optional). **Decided:** D-021, hybrid rice mask.
 - **Changed:** Eashwar: no step may depend on a reply from outside people; replies are bonuses.
-- **Next:** check AgriFieldNet / Open-SARice-10 coverage; open questions #9–12; then P1.
+- **Done:** checked AgriFieldNet (214 Odisha chips, all in southern Odisha, none in our districts; mostly fallow + some rice, season undocumented, probably rabi: M4 use only) and Open-SARice (2024 EE assets readable; 0/5 fakes mapped as rice; Baleswar 65–71% vs Bolangir 19–23% of real outlines mapped as rice).
+- **Next:** open questions #9–12; then P1.

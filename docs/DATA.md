@@ -97,6 +97,7 @@ Add to this file whenever a dataset surprises you.
 ### AgriFieldNet
 - Ground-surveyed crop types including fallow; check which states/seasons overlap usefully with the winter-crop question.
 - Fallow is treated as negative *for validation only*, which makes M4's scores lower bounds.
+- *(checked 17 Nov 2026, all 1,165 train label chips, 1.4 MB, from `source.coop/radiantearth/agrifieldnet-competition/train_labels/`)* Chips are 256×256 px at 10 m, georeferenced in UTM. **214 chips fall in Odisha, all in southern Odisha around 19.1–19.5°N, 83.0–83.9°E**, roughly 100+ km south of Bolangir and far from Baleswar. **None in our districts.** Odisha labelled pixels are mostly **fallow (23,746 px ≈ 237 ha) and rice (2,782 px ≈ 28 ha)**, plus a little maize, mustard, potato and pea. No wheat or gram in Odisha. **The acquisition date/season isn't in the docs, the tif tags, or the bucket metadata.** The crop mix (wheat, mustard, lentil, gram overall) suggests a rabi (winter) survey, so Odisha "rice" there is probably winter rice, not kharif. **Use:** M4 validation (fallow vs winter crop) in a nearby region, as planned. **Not usable for the kharif rice mask.** Test labels are withheld (competition split).
 
 ---
 
