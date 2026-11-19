@@ -1,0 +1,18 @@
+{
+  "decision": "D-022",
+  "seed": 20261119,
+  "frac": 0.2,
+  "created": "2026-11-19",
+  "note": "Final SICKLE test set. Do not evaluate on these groups before the end.",
+  "test_groups": [
+    307,
+    331,
+    354,
+    362,
+    371,
+    383,
+    404,
+    411,
+    440
+  ]
+}

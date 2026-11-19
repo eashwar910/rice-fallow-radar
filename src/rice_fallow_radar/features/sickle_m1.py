@@ -1,0 +1,187 @@
+"""M1 feature table for SICKLE: one row per (sample, issue date).
+
+Design choices worth defending:
+
+* **Issue dates are a weekly calendar grid, not offsets from the harvest date.** If rows were
+  built at `harvest - h` the target would be the constant `h` and the model would learn nothing.
+  So issue dates run every `EVERY` days through the season and the target is the true days to
+  harvest at that date; the 7/14/21-day "horizons" of the proposal are lead-time *buckets* at
+  evaluation (`LEAD_BUCKETS`).
+* **Every feature is computed from scenes dated on or before `as_of`** (`LOOKBACK_D` of history).
+  SICKLE patches run ~2 scenes past harvest, so an untruncated series leaks the answer.
+* **Rows are conditioned on the field not yet being harvested** (`lead >= MIN_LEAD`). M1 answers
+  "how long until harvest", and deciding whether a field is still standing is the harvest
+  detector's job, not M1's. State this when quoting M1 numbers.
+* **Weather is regional** (per MGRS tile, D-023), flagged by `weather_regional` so the same
+  table can hold Odisha's per-field weather later.
+"""
+
+from __future__ import annotations
+
+import numpy as np
+import pandas as pd
+
+EVERY = 7  # days between issue dates
+LOOKBACK_D = 120  # days of S1 history a row may use
+MIN_LEAD, MAX_LEAD = 1, 60  # days to harvest covered by the training rows
+LEAD_BUCKETS = {7: (4, 10), 14: (11, 17), 21: (18, 24)}
+SEASON_START_MONTH = {
+    "jan": 1,
+    "feb": 2,
+    "may": 5,
+    "jun": 6,
+    "aug": 8,
+    "sep": 9,
+    "oct": 10,
+    "nov": 11,
+    "dec": 12,
+}
+RAIN_W = (7, 14, 30)
+PEAK_W = 45  # days; window the VH peak search (see _s1_row)
+GDD_BASE = 10.0  # degC, standard for rice growing-degree days
+
+
+def _slope(days: np.ndarray, y: np.ndarray) -> float:
+    """dB per day, least squares. Needs two distinct dates."""
+    if len(days) < 2 or np.ptp(days) == 0:
+        return np.nan
+    return float(np.polyfit(days, y, 1)[0])
+
+
+def _s1_row(h: pd.DataFrame, as_of: pd.Timestamp) -> dict:
+    """S1 features from the scenes of one sample up to `as_of` (already filtered)."""
+    age = (as_of - h.date).dt.days.to_numpy()  # days before as_of, 0 = today
+    t = -age.astype(float)  # increasing with time, for slopes
+    vh, vv = h.vh_db.to_numpy(), h.vv_db.to_numpy()
+    imax, imin = int(np.argmax(vh)), int(np.argmin(vh))
+    f = {
+        "n_scenes": len(h),
+        "days_since_scene": int(age[-1]),
+        "vh_last": vh[-1],
+        "vv_last": vv[-1],
+        "ratio_last": vh[-1] - vv[-1],  # dB difference = log of the VH/VV ratio
+        "angle_last": h.angle.to_numpy()[-1],
+        "px_valid_last": h.n_valid.to_numpy()[-1],
+        "px_plot": int(h.n_px.iloc[0]),
+        "vh_max": vh.max(),
+        "vh_min": vh.min(),
+        "vh_last_minus_max": vh[-1] - vh.max(),
+        "days_since_vh_max": int(age[imax]),
+        "days_since_vh_min": int(age[imin]),
+    }
+    # peak of a 3-scene smoothed curve, searched in a short window: with a 120-day lookback the
+    # highest VH in the multi-cropped Cauvery delta is often the *previous* crop's canopy peak
+    for w in (PEAK_W,):
+        m = age <= w
+        sm = pd.Series(vh[m]).rolling(3, center=True, min_periods=1).mean().to_numpy()
+        f[f"days_since_vh_max_{w}"] = int(age[m][int(np.argmax(sm))]) if m.any() else np.nan
+        f[f"vh_max_sm_{w}"] = float(sm.max()) if m.any() else np.nan
+        f[f"vh_last_minus_max_sm_{w}"] = vh[-1] - sm.max() if m.any() else np.nan
+    for w in (30, 60):
+        m = age <= w
+        f[f"vh_mean_{w}"] = vh[m].mean() if m.any() else np.nan
+        f[f"vv_mean_{w}"] = vv[m].mean() if m.any() else np.nan
+        f[f"vh_sd_{w}"] = vh[m].std() if m.sum() > 1 else np.nan
+        f[f"vh_slope_{w}"] = _slope(t[m], vh[m])
+        f[f"n_scenes_{w}"] = int(m.sum())
+    return f
+
+
+def _weather_row(w: pd.DataFrame, as_of: pd.Timestamp, season_start: pd.Timestamp) -> dict:
+    """Rain, heat and moisture summaries for one tile-series up to `as_of`."""
+    past = w[w.date <= as_of]
+    if past.empty:
+        return {}
+    age = (as_of - past.date).dt.days
+    since = past[past.date >= season_start]
+    tmean = (past.temperature_2m_max + past.temperature_2m_min) / 2 - 273.15
+    f = {
+        "rain_season_mm": float(since.precipitation.sum()),
+        "gdd_season": float(np.clip(tmean[since.index] - GDD_BASE, 0, None).sum()),
+        "soil_w1_last": float(past.volumetric_soil_water_layer_1.iloc[-1]),
+    }
+    for d in RAIN_W:
+        m = age <= d
+        f[f"rain_{d}d_mm"] = float(past.precipitation[m].sum())
+        f[f"t2m_mean_{d}d"] = float(tmean[m].mean())
+    f["evap_30d_mm"] = float(-past.total_evaporation_sum[age <= 30].sum() * 1000)
+    f["pet_30d_mm"] = float(-past.potential_evaporation_sum[age <= 30].sum() * 1000)
+    f["water_balance_30d"] = f["rain_30d_mm"] - f["pet_30d_mm"]
+    return f
+
+
+def build(
+    labels: pd.DataFrame,
+    series: pd.DataFrame,
+    weather: pd.DataFrame | None = None,
+    tiles: pd.Series | None = None,
+) -> pd.DataFrame:
+    """One row per (sample, issue date). `series` is `ingest.sickle.s1_series` output."""
+    s = series[~series.edge_clipped].dropna(subset=["vh_db"])
+    by_id = {k: v.sort_values("date") for k, v in s.groupby("unique_id")}
+    wx = (
+        {k: v.sort_values("date") for k, v in weather.groupby("tile")}
+        if weather is not None
+        else {}
+    )
+    rows = []
+    for r in labels.itertuples():
+        h = by_id.get(r.UNIQUE_ID)
+        if h is None:
+            continue
+        start = pd.Timestamp(
+            year=int(r.YEAR), month=SEASON_START_MONTH[r.STANDARD_SEASON[:3]], day=1
+        )
+        # issue dates land on the same weekday every season, counting back from harvest
+        for lead in range(MIN_LEAD, MAX_LEAD + 1):
+            if (lead - MIN_LEAD) % EVERY:
+                continue
+            as_of = r.harvest - pd.Timedelta(days=lead)
+            if as_of < start:
+                continue
+            past = h[(h.date <= as_of) & (h.date > as_of - pd.Timedelta(days=LOOKBACK_D))]
+            if len(past) < 3:
+                continue
+            row = dict(
+                unique_id=r.UNIQUE_ID,
+                plot_id=r.PLOT_ID,
+                group=getattr(r, "group", np.nan),
+                season=r.STANDARD_SEASON,
+                year=int(r.YEAR),
+                as_of=as_of,
+                harvest=r.harvest,
+                lead=lead,
+                days_since_season_start=(as_of - start).days,
+                doy_sin=np.sin(2 * np.pi * as_of.day_of_year / 365.25),
+                doy_cos=np.cos(2 * np.pi * as_of.day_of_year / 365.25),
+                area_acres=r.AREA,
+            )
+            row.update(_s1_row(past, as_of))
+            if wx and tiles is not None:
+                ts = [t for t in tiles.get(r.UNIQUE_ID, []) if t in wx]
+                parts = [_weather_row(wx[t], as_of, start) for t in ts]
+                parts = [p for p in parts if p]
+                if parts:  # a sample on two tiles gets the mean of both regional series
+                    row.update(pd.DataFrame(parts).mean().to_dict())
+                row["weather_regional"] = True
+                row["weather_tiles"] = ",".join(ts)
+            rows.append(row)
+    out = pd.DataFrame(rows)
+    assert (out.lead >= MIN_LEAD).all(), "a row was built on or after its harvest date"
+    return out
+
+
+def feature_columns(df: pd.DataFrame) -> list[str]:
+    drop = {
+        "unique_id",
+        "plot_id",
+        "group",
+        "season",
+        "year",
+        "as_of",
+        "harvest",
+        "lead",
+        "weather_regional",
+        "weather_tiles",
+    }
+    return [c for c in df.columns if c not in drop]

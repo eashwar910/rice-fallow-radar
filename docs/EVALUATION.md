@@ -31,6 +31,20 @@ Splits are grouped so that test fields, seasons and neighbours are unseen in tra
 
 With ~350 SICKLE seasons, leave-one-year-out or grouped k-fold over blocks are both workable. Report which, and keep the final held-out test untouched until the end.
 
+**SICKLE, as implemented (19 Nov 2026).** Groups are the neighbour groups of D-022. Nine groups
+(64 of 319 samples, season mix within 2 points of the full set) are locked in
+`configs/sickle_test_groups.json` and are not read by any training or tuning script; the
+remaining 34 groups (255 samples) are the dev split, cross-validated with 5-fold
+`StratifiedGroupKFold` stratified by season. `src/rice_fallow_radar/eval/splits.py`.
+
+**Horizons are lead-time buckets, not issue-date offsets.** Rows are built on a weekly issue
+grid and the target is the true days to harvest at that date; building rows at `harvest - h`
+would make the target the constant `h`. The proposal's 7/14/21-day horizons are therefore scored
+on rows whose true lead falls in 4-10, 11-17 and 18-24 days
+(`features.sickle_m1.LEAD_BUCKETS`). M1 rows are also conditioned on the field not yet being
+harvested — deciding that is the harvest detector's job — which must be stated when quoting M1
+numbers.
+
 Hyperparameter tuning happens inside the training folds (nested CV or a validation split within training groups).
 
 ## Uncertainty in the results themselves

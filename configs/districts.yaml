@@ -18,3 +18,18 @@ districts:
 
 # M1 forecast horizons, days before harvest
 horizons_days: [7, 14, 21]
+
+# D-019: until the protocol-v1 tag, no pipeline may read data dated on or after this.
+data_cutoff: 2026-06-01
+
+# P1b labelling (D-018, D-025). Season = 2025-26 kharif.
+labelling:
+  season_start: 2025-06-01
+  season_end: 2026-02-15
+  chip_window: [2025-09-15, 2026-02-15]   # dates offered as harvest candidates
+  pool: 500          # candidate fields pulled for NDVI
+  n_label: 200       # fields sent to the labelling tool (half uniform, half kharif-signature)
+  n_repeat: 20       # shown a second time, for self-agreement
+  seed: 20261119
+  cloud_max: 0.4     # max mean Cloud Score+ cloudiness over a field for a usable scene
+  chip_m: 200        # side of the chip window in metres (pilot: 500 m lost the field in context)

@@ -114,7 +114,7 @@ This set is the backbone of M2 and also validates the radar harvest detector tha
 
 **Goal:** a forecaster with held-out SICKLE results at 7/14/21-day horizons, beating the baselines, with calibrated intervals.
 
-1. Baselines first: average harvest date; phenology rule from the radar curve. These are fast and give the interim report something solid even if the models wobble.
+1. Baselines first: average harvest date; phenology rule from the radar curve. These are fast and give the interim report something solid even if the models wobble. **Done 19 Nov:** 12.0 d [9.9, 14.3] and 17.1 d [16.1, 18.2] out of fold on the dev split (`runs/sickle_m1_baselines.csv`). The radar rule loses to the calendar; see LOG 19 Nov for why, and note the proposal's ≤ 7 d target now looks demanding.
 2. LightGBM on hand-built time-series features at each horizon.
 3. Conformalised quantile regression for intervals; check coverage.
 4. Temporal CNN; LSTM as a comparison if time allows.
