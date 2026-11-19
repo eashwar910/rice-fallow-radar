@@ -35,7 +35,8 @@ h2{margin:0 0 6px;font-size:16px} .mut{color:#666;font-size:12px}
 button{font:inherit;margin:2px 0;padding:4px 7px;border:1px solid #bbb;background:#fff;border-radius:4px;cursor:pointer}
 button.on{background:#06c;color:#fff;border-color:#06c}
 #prog{font-weight:600;margin:8px 0} kbd{background:#fff;border:1px solid #bbb;border-bottom-width:2px;border-radius:3px;padding:0 4px;font-size:11px}
-table.k{font-size:12px;border-collapse:collapse} table.k td{padding:1px 4px}
+table.k{font-size:12px;border-collapse:collapse} table.k td{padding:1px 4px;vertical-align:top}
+table.k td:first-child{white-space:nowrap}
 #list{margin-top:8px;max-height:28vh;overflow:auto;font-size:12px}
 #list div{padding:2px 4px;cursor:pointer;border-radius:3px}
 #list div.cur{background:#06c;color:#fff} #list div.done{color:#1a9850}
