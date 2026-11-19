@@ -15,6 +15,7 @@ Usage:
 import argparse
 import json
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.request import urlretrieve
@@ -147,10 +148,16 @@ def stage4_chips(sel: pd.DataFrame, ndvi: pd.DataFrame, pilot: int | None) -> No
 
     def fetch(job):
         p, scenes, win, outline = job
-        try:
-            urlretrieve(s2.chip_url(scenes, win, outline), p)
-        except Exception as e:  # a dead scene id should not kill the batch
-            print(f"  failed {p.parent.name}/{p.name}: {e}", flush=True)
+        # over ~6k requests Earth Engine returns the odd 503; one retry clears almost all of them,
+        # and anything still missing is picked up by re-running (stage 4 skips existing files)
+        for attempt in range(2):
+            try:
+                return urlretrieve(s2.chip_url(scenes, win, outline), p)
+            except Exception as e:
+                if attempt:
+                    print(f"  failed {p.parent.name}/{p.name}: {e}", flush=True)
+                else:
+                    time.sleep(3)
 
     with ThreadPoolExecutor(8) as ex:
         for i, _ in enumerate(ex.map(fetch, jobs), 1):
