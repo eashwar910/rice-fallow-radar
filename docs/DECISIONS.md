@@ -141,6 +141,25 @@ _Add below as the project moves._
 **Cost to know about:** stratum K is selected on *visible phenology*, so errors measured on it are optimistic and it cannot be used to estimate how often the pipeline meets a field it cannot read. The selection uses Sentinel-2 while M1/M2 and the harvest detector use Sentinel-1, so it does not leak the models' own inputs — but that argument must be made explicitly in the dissertation, not assumed. Weighted estimates need the per-stratum inclusion probabilities, which are recorded in `selected.parquet`.
 **Revisit if:** the rice mask (D-021) lands before labelling finishes, in which case stratum K could be redrawn from the mask's positives and compared against the S2 criterion as a validation of both.
 
+**Amended the same day, after drawing the sample.** The premise was wrong. The kharif-signature
+criterion turned out to be **non-selective: 88% of Bolangir and 94% of Baleswar pool fields pass
+it**, and 91% of the fields drawn into stratum U meet it too. The two strata are
+indistinguishable on every covariate (median green peak 0.75 vs 0.74, NDVI fall 0.48 vs 0.44,
+WorldCover cropland 1.0 both), so **stratum K is in practice a second uniform draw**. The 200
+fields stand as drawn (no re-pull), but they should be treated as one near-uniform sample: pool
+them for the headline, report per stratum only as a check, and keep `green_peak` /
+`ndvi_fall` / `kharif_signature` as recorded covariates rather than as a sampling filter.
+
+Why the premise failed, and why it matters: Open-SARice's "19–23% of Bolangir outlines mapped as
+rice" is about *rice specifically*. Most Bolangir fields evidently grow **something** in the
+monsoon — an NDVI rise and fall does not distinguish rice from any other kharif crop. So the
+scarcity the stratification was meant to fix is not scarcity of monsoon crops but scarcity of
+*rice*, which no cheap optical rule resolves. **That raises the value of the labeller's
+rice yes/no/unsure tick**, which becomes the only independent read on rice prevalence in the
+frame, and is the thing D-021's mask will be validated against. A separate finding from the same
+pull: **0 of 498 pool fields had fewer than 4 clear Sentinel-2 images** (median 37–39), so
+cloud-driven exclusion is not the risk the protocol assumed.
+
 ### D-026 · 19 Nov 2026 · Field registry keeps one FTW vintage (2025), not both
 **Decision:** `data/processed/fields.parquet` keeps only polygons with `determination:datetime` in **2025**. 292,060 fields (Bolangir 159,005 / Baleswar 133,055), 71,292 ha.
 **Why:** the FTW `results-by-admin-conf` parquet for Odisha **stacks two annual prediction layers** (2024 and 2025) in one file. This was found on 19 Nov by measuring polygon overlap: 41–53% of polygons ≥ 0.1 ha overlap another, median overlap is 67–72% of their own area, and a vintage crosstab shows **zero within-vintage overlaps — every overlap is 2024 against 2025**. Two stacked layers are not a field map: they double-count area, break any per-field join, and make `id` non-unique. The 2025 layer is the more complete of the two (Baleswar 50,205 ha vs 35,227 ha raw; Bolangir 60,171 vs 57,710) and both cover the same 5 km blocks, so 2025 is the one to keep. Its imagery predates the D-019 cut-off, so no replay contamination.

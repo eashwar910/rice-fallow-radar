@@ -70,11 +70,14 @@ spread over the 5 km blocks of the registry:
   purpose is to buy enough harvest dates: Open-SARice suggests only ~20% of Bolangir fields are
   rice, so a uniform-only sample of 200 would yield very few Bolangir harvest dates.
 
-Why the split, and what it costs: stratum K is selected on Sentinel-2, while M1/M2 inputs and the
-harvest detector are Sentinel-1. So K does not leak the model's own inputs, but it is still
-*selected on the outcome being easy to see*, and errors measured on K are optimistic. **Every
-Odisha result is reported per stratum, headline on U, with K as the larger-sample comparison.**
-Weighted estimates use the known inclusion probabilities of each stratum.
+**What actually happened (19 Nov 2026, after the pull).** The kharif criterion is
+non-selective here: 88% of Bolangir and 94% of Baleswar pool fields pass it, as do 91% of the
+fields drawn into stratum U, and the two strata match on every covariate. So the 200 fields are
+**effectively one near-uniform sample** and are analysed that way: pooled for the headline, split
+by stratum only as a check (D-025, amended). The reason is that an NDVI rise and fall marks *any*
+monsoon crop, not rice — which is exactly why the `rice` tick below carries more weight than
+originally planned. Cloud is also a smaller problem than feared: no pool field had fewer than 4
+clear Sentinel-2 images (median 37–39).
 
 Held out: after labelling, a fixed 60% of `ok` rows (seeded, stratum- and district-balanced) is
 locked for final evaluation; 40% is available for M2 fine-tuning and conformal recalibration
