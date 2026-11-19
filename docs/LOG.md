@@ -54,3 +54,9 @@ Suggested shape per entry — use whatever is useful:
 - **Done:** checked AgriFieldNet (214 Odisha chips, all in southern Odisha, none in our districts; mostly fallow + some rice, season undocumented, probably rabi: M4 use only) and Open-SARice (2024 EE assets readable; 0/5 fakes mapped as rice; Baleswar 65–71% vs Bolangir 19–23% of real outlines mapped as rice).
 - **Done:** SICKLE neighbour groups (`scripts/sickle_neighbour_groups.py`): 131 exact plots → 43 groups, largest 9% of dates. **Decided:** D-022, neighbour-group CV + locked ~20% test.
 - **Next:** open questions #11–12; then P1.
+
+## 2026-11-19
+
+- **Decided:** D-023 (SICKLE weather = one regional series for the study area, with a regional-vs-per-field flag in the feature table) and D-024 (the 588 rough recalled dates stay out of M1; optional down-weighted ablation later). Open questions #11 and #12 closed; #10 (licence/test set) stays parked — plan assumes no reply.
+- **Changed:** target for the 3 Dec interim report is "midway through P2" — baselines plus a first LightGBM on SICKLE, not a finished M1.
+- **Next:** P1 field registry (`registry/fields.py` → `data/processed/fields.parquet` + area stats), then the P1b labelling protocol so Eashwar can start labelling while SICKLE features and the M1 baselines are built. Protocol freeze still due 30 Nov.
