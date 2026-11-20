@@ -76,3 +76,32 @@ Suggested shape per entry — use whatever is useful:
 - **Risk to flag:** the proposal's success criterion is MAE ≤ 7 days at the 14-day horizon. The calendar baseline is already 12.0 d and the labels carry farmer-recall noise on 16-pixel plots. Halving the baseline error may not be reachable on SICKLE; the interim report should say so and propose reporting improvement-over-baseline alongside the absolute target.
 - **Done:** all **6,156 chips** generated for the 200 fields (42 MB, median 28 clear dates per field, range 24–55; 0 clear dates missing a chip). 3 of ~6,100 requests hit a transient Earth Engine 503; the fetch now retries once and the stage is resumable, so a re-run fills any gap. `data/interim/odisha_labels/index.html` is ready to open — **labelling can start**.
 - **Next:** LightGBM on this feature table (the headline interim number), then conformalised quantile intervals. Eashwar to start labelling. Protocol freeze 30 Nov.
+
+## 2026-11-20 — P1b labelling done
+
+- **Done: all 220 queue rows labelled in one sitting** (19–20 Nov, ~6 h), exported to
+  `data/interim/odisha_labels/labels_2026-11-20.csv`. `scripts/odisha_label_ingest.py` joins the
+  sampling frame, splits off the repeats, recomputes each interval and midpoint, and writes
+  `data/processed/odisha_labels.parquet` (200 first-labellings, `eval_lock` assigned from the
+  config seed before any model has seen a label: **92 locked / 61 free** of 153 `ok` rows,
+  balanced over district × stratum). The CSV is now a deliberate exception to the `data/`
+  gitignore — it is the only copy of work that cannot be redone identically.
+- **Result: 153 harvest intervals of 200 fields.** 33 `cant_tell` (24 Bolangir vs 9 Baleswar),
+  13 `not_rice`, 1 `never_green`, **0 `not_a_field`**. Intervals are tighter than the protocol
+  assumed (median 5 d, max 10, against a predicted 5–15), and midpoints span 8 Nov 2025 –
+  9 Feb 2026, a 13-week spread. Good table for the interim report.
+- **Learned (important): the binding precision floor is the labeller, not the imagery.** Over the
+  20 repeats, `status` agreement is 90% and `|midpoint₁ − midpoint₂|` averages **8.8 d**
+  (median 4; 6 pairs exact; one 49-day pair, `bol-0b1bf23444d0`, where the two passes picked
+  different brown transitions — 6.1 d without it). So Odisha MAE should be read against ~6–9 d,
+  not the 2.3-day interval half-width. Protocol §5 amended with the measured figures.
+- **Learned (important): the `rice` tick did not survive contact.** Only 77 of the 153 `ok` rows
+  are `rice = yes`; 75 are `unsure`, and repeat agreement on the tick is **55%** (nearly all of it
+  `yes` ↔ `unsure` churn; `no` vs not-`no` agrees 80%). Since D-025's amendment made this tick the
+  project's only independent read on rice prevalence, that read is now a range — **40–82% of
+  stratum-U fields** — and too loose to score the D-021 rice mask against. New open question #13,
+  with a cheap fix: re-tick `rice` from the full-season NDVI series (kharif rice floods *before*
+  it greens, and the labeller was only ever shown the harvest-window chips). It touches no harvest
+  date, so it is not a protocol change.
+- **Next:** LightGBM on the SICKLE feature table (the interim headline), then decide #13 before
+  the 30 Nov freeze.

@@ -1,6 +1,14 @@
 # data and outputs stay local (see docs/ARCHITECTURE.md)
-data/
+data/*
 runs/
+
+# ...except the hand labels: 6 h of irreplaceable work, 20 KB, our own. Git does not descend into
+# an ignored directory, so every parent has to be re-opened and its other contents re-ignored.
+!data/interim/
+data/interim/*
+!data/interim/odisha_labels/
+data/interim/odisha_labels/*
+!data/interim/odisha_labels/labels_*.csv
 
 # SICKLE (authors' release, access-controlled, no public licence: never commit)
 sickle_dataset/

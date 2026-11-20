@@ -113,6 +113,11 @@ double-weight those fields.
 - **Precision floor.** Sentinel-2 revisit is 5 days and Nov–Jan in coastal Odisha is cloudy, so a
   typical interval is 5–15 days wide. Odisha MAEs below the mean interval half-width are not
   meaningful.
+  *Measured (20 Nov 2026, after labelling).* Intervals came out narrower than that — median 5
+  days, mean 4.6, so a 2.3-day half-width. But self-agreement (§3) is worse: mean
+  `|midpoint₁ − midpoint₂|` is 8.8 days (6.1 excluding one 49-day pair). **The floor to quote is
+  the self-agreement figure, ~6–9 days, not the interval half-width**, because it bounds the
+  labels' accuracy and not just their stated precision.
 - **One labeller, no expert.** Eashwar is not an agronomist and has not visited the fields.
   Self-agreement measures consistency, not correctness; there is no inter-rater estimate.
 - **Interpreting imagery, not ground truth.** The label is what a 10 m optical image shows, which

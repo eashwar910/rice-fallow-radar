@@ -181,9 +181,9 @@ Any of these should be noted in `DECISIONS.md` and acknowledged as a limitation.
 | Phase | Status | Notes |
 |---|---|---|
 | P0 Setup | ✅ Done (13 Nov) | See P0 step tracker |
-| P1 Pipeline | Not started | |
-| P1b Odisha labels | Not started | |
-| P2 M1 | Not started | |
+| P1 Pipeline | ✅ Field registry done (19 Nov) | `data/processed/fields.parquet`, 292,060 fields; feature builder exists for SICKLE, not yet for Odisha |
+| P1b Odisha labels | ✅ Labelled (20 Nov) | 153 harvest intervals of 200 fields; `data/processed/odisha_labels.parquet`, 60% eval-locked. See DATA.md §Odisha hand labels |
+| P2 M1 | In progress | Baselines scored (seasonal mean 12.0 d); LightGBM next |
 | Protocol freeze | Not started | |
 | P3 M2 | Not started | |
 | P4 M3/M4 | Not started | |

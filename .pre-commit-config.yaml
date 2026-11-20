@@ -11,6 +11,9 @@ repos:
       - id: check-added-large-files
         args: [--maxkb=2000]
       - id: check-yaml
+      # raw hand-label exports stay byte-exact: trailing whitespace can live inside a quoted note
       - id: end-of-file-fixer
+        exclude: ^data/interim/odisha_labels/labels_.*\.csv$
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md]
+        exclude: ^data/interim/odisha_labels/labels_.*\.csv$
