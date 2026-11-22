@@ -46,20 +46,26 @@ def vh_peak_rule(train: pd.DataFrame, test: pd.DataFrame) -> np.ndarray:
     return (test.season.map(per_season).fillna(overall) - test[col]).to_numpy(dtype=float)
 
 
-def bootstrap_mae(
-    err: np.ndarray, groups: np.ndarray, n: int = 2000, seed: int = 0
+def bootstrap_mean(
+    x: np.ndarray, groups: np.ndarray, n: int = 2000, seed: int = 0
 ) -> tuple[float, float, float]:
-    """MAE with a 95% CI, resampling whole groups (rows within a group are not independent)."""
-    err, groups = np.asarray(err, float), np.asarray(groups)
-    keep = ~np.isnan(err)
-    err, groups = err[keep], groups[keep]
-    if not len(err):
+    """Mean of `x` with a 95% CI, resampling whole groups (rows within a group are correlated)."""
+    x, groups = np.asarray(x, float), np.asarray(groups)
+    keep = ~np.isnan(x)
+    x, groups = x[keep], groups[keep]
+    if not len(x):
         return (np.nan,) * 3
     uniq = np.unique(groups)
     idx = {g: np.flatnonzero(groups == g) for g in uniq}
     rng = np.random.default_rng(seed)
     draws = [
-        np.abs(err[np.concatenate([idx[g] for g in rng.choice(uniq, len(uniq))])]).mean()
-        for _ in range(n)
+        x[np.concatenate([idx[g] for g in rng.choice(uniq, len(uniq))])].mean() for _ in range(n)
     ]
-    return float(np.abs(err).mean()), *np.percentile(draws, [2.5, 97.5]).tolist()
+    return float(x.mean()), *np.percentile(draws, [2.5, 97.5]).tolist()
+
+
+def bootstrap_mae(
+    err: np.ndarray, groups: np.ndarray, n: int = 2000, seed: int = 0
+) -> tuple[float, float, float]:
+    """MAE with a 95% CI. Paired arm-vs-arm differences want `bootstrap_mean` on the signed gap."""
+    return bootstrap_mean(np.abs(np.asarray(err, float)), groups, n, seed)

@@ -164,3 +164,69 @@ Suggested shape per entry — use whatever is useful:
   it is also the honest number for how often a 30-day optical trend is unavailable.
 - **Next:** point C — LightGBM as a feature-set ablation (calendar-only → S1 → S1+weather →
   S1+S2+weather), nested tuning inside train folds, group bootstrap CIs on the dev split.
+
+## 2026-11-22 (fourth session) — FREEZE_PLAN point C: the LightGBM ablation, and it is a negative result
+
+- **Done (point C):** `models/m1_lightgbm.py` + `scripts/sickle_m1_lightgbm.py` →
+  `runs/sickle_m1_lightgbm.csv` (+ `_tuning`, `_importance`). Seven arms, identical rows and
+  identical folds, nested CV (inner 3-fold tuning over a 12-point grid inside each outer fold's
+  training rows only), L1 objective, 95% CIs bootstrapped over neighbour groups, dev split only.
+  Folds now come from `splits.assign_folds`, shared with the baselines script so the two sets of
+  numbers are comparable rather than merely similar.
+
+| arm | features | out-of-fold MAE (d) |
+|---|---|---|
+| base (calendar + plot size + season) | 5 | **7.41 [5.67, 9.26]** |
+| base + s1 | 31 | 7.58 [6.33, 8.93] |
+| base + s1 + weather | 43 | 7.65 [6.31, 8.98] |
+| base + s2 + weather | 32 | 8.23 [6.94, 9.58] |
+| all (base + s1 + s2 + weather) | 58 | 7.85 [6.45, 9.21] |
+| s1 only (no calendar) | 26 | 10.43 [9.19, 11.85] |
+| sensors only (s1 + s2 + weather, no calendar) | 53 | 7.86 [6.56, 9.18] |
+| seasonal-mean baseline | — | 11.99 [9.87, 14.29] |
+| VH-peak baseline | — | 17.15 [16.12, 18.22] |
+
+- **Learned (the headline, and it is not the one the plan expected): LightGBM beats the baseline
+  by 4.6 days and none of that comes from remote sensing.** Paired over the same rows, every arm
+  improves on the seasonal mean by +4.58 d [+3.24, +6.32] — but the **calendar-only arm is the
+  best of all seven**, and no arm carrying satellite data separates from it (`base+s1` +0.17 d
+  [−0.78, +1.21]; `all` +0.44 d [−0.48, +1.40]). **The calendar-only arm is exactly why this is
+  reportable:** without it, "S1+S2+weather LightGBM gets 7.85 d against a 12.0 d baseline" would
+  have read as evidence that the remote sensing works.
+- **Learned (what makes it a result rather than a failure): the sensors are redundant with the
+  clock, not empty.** With no calendar features at all, `s1 only` scores 10.43 d — already better
+  than the seasonal-mean baseline, so radar genuinely carries harvest information — and
+  `sensors only` reaches **7.86 d, statistically indistinguishable from calendar-only 7.41 d**
+  (+0.46 d [−0.60, +1.53]). Two disjoint information sources reach the same accuracy
+  independently, and their union adds nothing.
+- **Why, and the hypothesis it generates for P3.** The Cauvery delta is irrigated and tightly
+  scheduled, so the calendar *is* a good harvest model there; the satellite is spending its
+  signal re-deriving a date the calendar already knows. Rainfed Odisha should not behave that way
+  — monsoon onset moves sowing by weeks, which is the entire premise of the project. **So M2 stops
+  being "measure the transfer gap" and becomes "measure which information source survives the
+  shift": the prediction is that the calendar arm degrades sharply on Odisha while the sensor arm
+  holds.** That is a sharper CS question than the original framing and it is testable with the
+  labels already in hand.
+- **Learned: the proposal's MAE ≤ 7 d criterion is not a usable success test.** 7.41 d is reached
+  with no satellite data at all. An absolute day count cannot distinguish a working forecaster
+  from a calendar, so the frozen protocol (point F) should state the criterion as *beating the
+  calendar-only arm on the same folds*. This is the Eashwar item-4 conversation with a number
+  attached, and it is worth raising with Dr Chandesa before the interim report.
+- **Learned (diagnostic, needs following up): acquisition geometry outranks phenology.**
+  `angle_last` is the second-largest total gain after `gdd_season`, ahead of every VH or NDVI
+  feature, and `px_valid_last` is sixth. Incidence angle encodes the orbit track and therefore
+  roughly where the plot is; plot pixel count encodes which plot it is. Both are legal at `as_of`
+  (no temporal leakage) and the folds are grouped, so this is not leakage — but a model leaning on
+  plot identity over crop state is consistent with the pooled null. **Worth one ablation: drop
+  `angle_last` and `px_*` and see whether the sensor arms move.**
+- **Consequences recorded:** D-028 amended the same day (its own revisit clause fired — S2 stays
+  in the table, but the claim becomes "no measurable pooled gain on SICKLE, retained as the
+  transfer hypothesis"). **Point E (L8 thermal) does not run**: its gate was "only if C shows
+  optical earns its place". The gate worked and saved the time.
+- **Honest limitation:** 33 neighbour groups give CI half-widths of ~1.8 d, so this ablation
+  cannot resolve a sub-day effect. "Not separated" means not separated at this sample size, not
+  proven equal. Say so wherever the table appears.
+- **Also:** `n_jobs=-1` made LightGBM **5x slower** on 2k rows than `n_jobs=1` (5.2 s vs 0.96 s
+  per 500-tree fit) — thread contention on tiny data. Pinned to 1; the full 7-arm run is ~12 min.
+- **Next:** point D — conformalised quantile regression on the best arm, coverage and width by
+  lead and season. Then F, the freeze, where the success criterion needs rewording.

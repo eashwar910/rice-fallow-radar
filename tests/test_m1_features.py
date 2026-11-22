@@ -77,6 +77,44 @@ def test_s2_adds_columns_but_never_rows():
     assert both.days_since_clear_s2.max() > 10
 
 
+@needs_s2
+def test_every_feature_belongs_to_exactly_one_block():
+    """The point-C ablation picks columns by block, so an unclassified column would silently
+    leak into the wrong arm -- an optical column into S1-only, or a sensor into calendar-only."""
+    lab, s, s2 = _labels_and_series(with_s2=True)
+    f = F.build(lab, s, s2=s2)
+    cols = F.feature_columns(f)
+    assert [c for c in cols if F.block_of(c) == "unknown"] == []
+    blocks = ("base", "s1", "weather", "s2")
+    assert sorted(F.block_columns(f, blocks)) == sorted(cols)
+    # the blocks partition: no column appears in two of them
+    assert sum(len(F.block_columns(f, (b,))) for b in blocks) == len(cols)
+    assert F.block_columns(f, ("base",)) and F.block_columns(f, ("s2",))
+    # the fallback branch must not be a catch-all for typos
+    assert all(c.startswith(F.S1_PREFIXES) for c in F.block_columns(f, ("s1",)))
+
+
+def test_folds_keep_every_issue_date_of_a_sample_together():
+    lab, s = _labels_and_series()
+    f = F.build(lab, s)
+    fold = splits.assign_folds(f, n=3)
+    assert fold.notna().all()
+    assert (
+        f.groupby(f.unique_id)
+        .apply(lambda g: fold[g.index].nunique(), include_groups=False)
+        .eq(1)
+        .all()
+    )
+    assert f.groupby(fold).group.nunique().gt(0).all()
+    # a plot's neighbour group must not straddle folds either (D-022 spatial blocking)
+    assert (
+        f.groupby("group")
+        .apply(lambda g: fold[g.index].nunique(), include_groups=False)
+        .eq(1)
+        .all()
+    )
+
+
 def test_every_row_predates_its_harvest():
     lab, s = _labels_and_series()
     f = F.build(lab, s)

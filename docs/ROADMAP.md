@@ -118,7 +118,11 @@ This set is the backbone of M2 and also validates the radar harvest detector tha
    NDVI's pre-harvest decline is stronger and earlier than S1's VH drop, which is what justifies
    putting optical into M1's features (decision 1 of `FREEZE_PLAN.md`). See LOG 22 Nov.
 1. Baselines first: average harvest date; phenology rule from the radar curve. These are fast and give the interim report something solid even if the models wobble. **Done 19 Nov:** 12.0 d [9.9, 14.3] and 17.1 d [16.1, 18.2] out of fold on the dev split (`runs/sickle_m1_baselines.csv`). The radar rule loses to the calendar; see LOG 19 Nov for why, and note the proposal's ≤ 7 d target now looks demanding.
-2. LightGBM on hand-built time-series features at each horizon.
+2. LightGBM on hand-built time-series features at each horizon. **Done 22 Nov** as a 7-arm
+   feature-set ablation (`runs/sickle_m1_lightgbm.csv`): best arm **7.41 d**, which more than
+   beats the 12.0 d baseline — but it is the **calendar-only** arm, and no arm carrying satellite
+   data separates from it. Sensors with no calendar reach 7.86 d, so the two information sources
+   are redundant rather than one being useless. See LOG 22 Nov; this reframes P3.
 3. Conformalised quantile regression for intervals; check coverage.
 4. Temporal CNN; LSTM as a comparison if time allows.
 5. Grouped splits by plot, year and spatial block; bootstrap CIs.
@@ -188,7 +192,7 @@ Any of these should be noted in `DECISIONS.md` and acknowledged as a limitation.
 | P0 Setup | ✅ Done (13 Nov) | See P0 step tracker |
 | P1 Pipeline | ✅ Field registry done (19 Nov) | `data/processed/fields.parquet`, 292,060 fields; feature builder exists for SICKLE, not yet for Odisha |
 | P1b Odisha labels | ✅ Labelled (20 Nov) | 153 harvest intervals of 200 fields; `data/processed/odisha_labels.parquet`, 60% eval-locked. See DATA.md §Odisha hand labels |
-| P2 M1 | In progress | Baselines scored (seasonal mean 12.0 d); S2 series done (FREEZE_PLAN A, 22 Nov); S2 features then LightGBM ablation next |
+| P2 M1 | In progress | LightGBM ablation done (FREEZE_PLAN A–C, 22 Nov): 7.41 d best, but calendar-only wins and no sensor arm separates. Conformal intervals (D) next, then the freeze (F) |
 | Protocol freeze | Not started | |
 | P3 M2 | Not started | |
 | P4 M3/M4 | Not started | |

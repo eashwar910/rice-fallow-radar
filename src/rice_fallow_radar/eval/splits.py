@@ -13,11 +13,13 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import StratifiedGroupKFold
 
 GROUPS_CSV = Path("data/interim/sickle_neighbour_groups.csv")
 LOCK_FILE = Path("configs/sickle_test_groups.json")
 TEST_FRAC = 0.2
 SEED = 20261119
+N_FOLDS = 5
 
 
 def group_of_plot() -> pd.Series:
@@ -81,3 +83,19 @@ def dev_test(labels: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     lab = with_groups(labels)
     locked = test_groups(labels)
     return lab[~lab.group.isin(locked)].copy(), lab[lab.group.isin(locked)].copy()
+
+
+def assign_folds(features: pd.DataFrame, n: int = N_FOLDS, seed: int = SEED) -> pd.Series:
+    """Fold index per feature row, stratified by season over neighbour groups.
+
+    Assigned per *sample*, so every issue date of a sample lands on the same side of the split --
+    issue dates of one plot-season share almost all their scenes. Shared by the baselines and the
+    LightGBM ablation so their out-of-fold numbers are comparable rather than merely similar.
+    """
+    per = features.drop_duplicates("unique_id")[["unique_id", "group", "season"]]
+    cv = StratifiedGroupKFold(n, shuffle=True, random_state=seed)
+    fold = pd.Series(np.nan, index=features.index)
+    for k, (_, te) in enumerate(cv.split(per, per.season, per.group)):
+        fold[features.unique_id.isin(per.unique_id.iloc[te]).to_numpy()] = k
+    assert fold.notna().all(), "a feature row was left unassigned"
+    return fold

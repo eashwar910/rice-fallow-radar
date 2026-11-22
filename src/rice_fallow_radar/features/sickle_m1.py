@@ -46,9 +46,41 @@ SEASON_START_MONTH = {
 RAIN_W = (7, 14, 30)
 PEAK_W = 45  # days; window the VH peak search (see _s1_row)
 GDD_BASE = 10.0  # degC, standard for rice growing-degree days
-# every column `_s2_row` adds, for the feature-set ablation. Kept in step with `_s2_row` by
-# test_s2_adds_columns_but_never_rows: one optical column left in the S1-only arm voids point C.
+# Feature blocks for the point-C ablation. `block_of` is checked column-by-column by
+# test_every_feature_belongs_to_exactly_one_block: one optical column left in the S1-only arm,
+# or one sensor column left in the calendar arm, silently voids the ablation.
 S2_PREFIXES = ("ndvi", "ndwi", "mndwi", "n_scenes_s2", "days_since_clear_s2", "days_since_ndvi")
+WEATHER_PREFIXES = ("rain_", "gdd_", "soil_", "t2m_", "evap_", "pet_", "water_balance_")
+S1_PREFIXES = (
+    "vh_",
+    "vv_",
+    "ratio_",
+    "angle_",
+    "px_",
+    "n_scenes",
+    "days_since_scene",
+    "days_since_vh",
+)
+# what the model knows without any satellite: where in the season it is, and how big the plot is
+BASE_COLS = ("days_since_season_start", "doy_sin", "doy_cos", "area_acres")
+
+
+def block_of(col: str) -> str:
+    """Which ablation block a feature column belongs to: base, s1, weather, s2 or unknown."""
+    if col in BASE_COLS:
+        return "base"
+    if col.startswith(S2_PREFIXES):  # before s1: `n_scenes_s2` would match `n_scenes`
+        return "s2"
+    if col.startswith(WEATHER_PREFIXES):
+        return "weather"
+    if col.startswith(S1_PREFIXES):
+        return "s1"
+    return "unknown"
+
+
+def block_columns(df: pd.DataFrame, blocks: tuple[str, ...]) -> list[str]:
+    """The feature columns of `df` belonging to any of `blocks`."""
+    return [c for c in feature_columns(df) if block_of(c) in blocks]
 
 
 def _slope(days: np.ndarray, y: np.ndarray) -> float:

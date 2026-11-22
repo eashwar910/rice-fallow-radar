@@ -14,7 +14,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import StratifiedGroupKFold
 
 from rice_fallow_radar.eval import splits
 from rice_fallow_radar.features import sickle_m1 as F
@@ -57,20 +56,8 @@ def main() -> None:
     )
     print(f"rows with no clear S2 scene in the lookback: {feats.n_scenes_s2.eq(0).sum()}")
 
-    # one fold assignment per sample, so all issue dates of a sample stay on the same side
-    per_sample = dev_f.drop_duplicates("unique_id")[["unique_id", "group", "season"]]
-    cv = StratifiedGroupKFold(5, shuffle=True, random_state=splits.SEED)
-    for k, (_, te) in enumerate(cv.split(per_sample, per_sample.season, per_sample.group)):
-        dev_f.loc[dev_f.unique_id.isin(per_sample.unique_id.iloc[te]), "fold"] = k
-    print(
-        "fold sizes (samples):",
-        per_sample.assign(
-            f=dev_f.groupby("unique_id").fold.first().reindex(per_sample.unique_id).to_numpy()
-        )
-        .groupby("f")
-        .size()
-        .to_dict(),
-    )
+    dev_f["fold"] = splits.assign_folds(dev_f)
+    print("fold sizes (samples):", dev_f.groupby("fold").unique_id.nunique().to_dict())
 
     for name in BASELINES:
         dev_f[name] = np.nan
