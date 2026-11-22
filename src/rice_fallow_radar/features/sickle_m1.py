@@ -14,12 +14,19 @@ Design choices worth defending:
   detector's job, not M1's. State this when quoting M1 numbers.
 * **Weather is regional** (per MGRS tile, D-023), flagged by `weather_regional` so the same
   table can hold Odisha's per-field weather later.
+* **Optical features are opt-in and row-preserving** (`s2=`). Passing S2 adds columns and never
+  adds or drops a row, so the S1-only vs S1+S2 ablation compares models on identical rows.
+  Only scenes that pass SICKLE's cloud mask count, and every S2 row of the current table has at
+  least 2 of them (median 9), so nothing is lost. MNDWI gets two columns rather than the full
+  battery: it measured flat across harvest (DATA.md, 22 Nov), so it is a waterlogging feature.
 """
 
 from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+
+from rice_fallow_radar.ingest.sickle import best_per_date
 
 EVERY = 7  # days between issue dates
 LOOKBACK_D = 120  # days of S1 history a row may use
@@ -39,10 +46,13 @@ SEASON_START_MONTH = {
 RAIN_W = (7, 14, 30)
 PEAK_W = 45  # days; window the VH peak search (see _s1_row)
 GDD_BASE = 10.0  # degC, standard for rice growing-degree days
+# every column `_s2_row` adds, for the feature-set ablation. Kept in step with `_s2_row` by
+# test_s2_adds_columns_but_never_rows: one optical column left in the S1-only arm voids point C.
+S2_PREFIXES = ("ndvi", "ndwi", "mndwi", "n_scenes_s2", "days_since_clear_s2", "days_since_ndvi")
 
 
 def _slope(days: np.ndarray, y: np.ndarray) -> float:
-    """dB per day, least squares. Needs two distinct dates."""
+    """Units of `y` per day, least squares. Needs two distinct dates."""
     if len(days) < 2 or np.ptp(days) == 0:
         return np.nan
     return float(np.polyfit(days, y, 1)[0])
@@ -87,6 +97,36 @@ def _s1_row(h: pd.DataFrame, as_of: pd.Timestamp) -> dict:
     return f
 
 
+def _s2_row(h: pd.DataFrame, as_of: pd.Timestamp) -> dict:
+    """Optical features from the clear S2 scenes of one sample up to `as_of` (already filtered)."""
+    age = (as_of - h.date).dt.days.to_numpy()
+    t = -age.astype(float)
+    ndvi, ndwi, mndwi = h.ndvi.to_numpy(), h.ndwi.to_numpy(), h.mndwi.to_numpy()
+    f = {
+        "n_scenes_s2": len(h),
+        "days_since_clear_s2": int(age[-1]),  # a stale NDVI is worth less than a fresh one
+        "ndvi_last": ndvi[-1],
+        "ndvi_delta": ndvi[-1] - ndvi[-2] if len(ndvi) > 1 else np.nan,
+        "ndwi_last": ndwi[-1],
+        "mndwi_last": mndwi[-1],
+    }
+    # the greenest scene over a 120-day lookback is often the *previous* crop's canopy in the
+    # multi-cropped delta, so the green peak is searched in a short window (same trap as VH)
+    m = age <= PEAK_W
+    sm = pd.Series(ndvi[m]).rolling(3, center=True, min_periods=1).mean().to_numpy()
+    f[f"days_since_ndvi_max_{PEAK_W}"] = int(age[m][int(np.argmax(sm))]) if m.any() else np.nan
+    f[f"ndvi_max_sm_{PEAK_W}"] = float(sm.max()) if m.any() else np.nan
+    f[f"ndvi_last_minus_max_sm_{PEAK_W}"] = ndvi[-1] - sm.max() if m.any() else np.nan
+    for w in (30, 60):
+        m = age <= w
+        f[f"ndvi_mean_{w}"] = ndvi[m].mean() if m.any() else np.nan
+        f[f"ndvi_slope_{w}"] = _slope(t[m], ndvi[m])
+    m = age <= 30
+    f["ndwi_slope_30"] = _slope(t[m], ndwi[m])
+    f["mndwi_mean_30"] = mndwi[m].mean() if m.any() else np.nan
+    return f
+
+
 def _weather_row(w: pd.DataFrame, as_of: pd.Timestamp, season_start: pd.Timestamp) -> dict:
     """Rain, heat and moisture summaries for one tile-series up to `as_of`."""
     past = w[w.date <= as_of]
@@ -115,10 +155,16 @@ def build(
     series: pd.DataFrame,
     weather: pd.DataFrame | None = None,
     tiles: pd.Series | None = None,
+    s2: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
-    """One row per (sample, issue date). `series` is `ingest.sickle.s1_series` output."""
+    """One row per (sample, issue date). `series` is `ingest.sickle.s1_series` output,
+    `s2` is `ingest.sickle.s2_series` output (optional; adds columns, never rows)."""
     s = series[~series.edge_clipped].dropna(subset=["vh_db"])
     by_id = {k: v.sort_values("date") for k, v in s.groupby("unique_id")}
+    s2_by = {}
+    if s2 is not None:
+        clear = s2[s2.clear & ~s2.edge_clipped].dropna(subset=["ndvi", "ndwi", "mndwi"])
+        s2_by = {k: v for k, v in best_per_date(clear).groupby("unique_id")}
     wx = (
         {k: v.sort_values("date") for k, v in weather.groupby("tile")}
         if weather is not None
@@ -157,6 +203,17 @@ def build(
                 area_acres=r.AREA,
             )
             row.update(_s1_row(past, as_of))
+            if s2 is not None:
+                h2 = s2_by.get(r.UNIQUE_ID)
+                win = pd.Timedelta(days=LOOKBACK_D)
+                past2 = (
+                    h2[(h2.date <= as_of) & (h2.date > as_of - win)]
+                    if h2 is not None
+                    else pd.DataFrame()
+                )
+                row["n_scenes_s2"] = 0  # keep the column defined when cloud left nothing
+                if len(past2):
+                    row.update(_s2_row(past2, as_of))
             if wx and tiles is not None:
                 ts = [t for t in tiles.get(r.UNIQUE_ID, []) if t in wx]
                 parts = [_weather_row(wx[t], as_of, start) for t in ts]

@@ -13,7 +13,7 @@ All four components are built in this project; the methods they use are publishe
 | | |
 |---|---|
 | Objective / RQ | O1 / RQ1 · gap G1 |
-| Inputs | Sentinel-1 VV, VH, VH/VV ratio series (per field, with time since last pass); weather (rainfall, temperature, evaporation); optionally Sentinel-2 indices when cloud-free; calendar features (day of year) |
+| Inputs | Sentinel-1 VV, VH, VH/VV ratio series (per field, with time since last pass); weather (rainfall, temperature, evaporation); Sentinel-2 NDVI/NDWI/MNDWI (cloud-masked; part of the feature set since 22 Nov, D-028 — the optical pre-harvest decline is stronger and earlier than S1's); calendar features (day of year) |
 | Target | Days to harvest at issue date, evaluated at 7, 14, 21-day horizons |
 | Training data | SICKLE (Tamil Nadu): ~388 plots with field-recorded harvest dates, 2018–2021 → roughly 350 labelled seasons |
 | Current choice | LightGBM on engineered time-series features + compact temporal CNN (Pelletier et al., 2019); LSTM as comparison (as used by Mimić et al., 2025) |

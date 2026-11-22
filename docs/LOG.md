@@ -134,3 +134,33 @@ Suggested shape per entry — use whatever is useful:
 - **Next:** point B — NDVI/NDWI/MNDWI features in `features/sickle_m1.py` (last value, deltas,
   slopes, days-since-green-peak, days-since-last-clear-scene) under the same `as_of` truncation
   and leakage assert, then point C's feature-set ablation.
+
+## 2026-11-22 (third session) — FREEZE_PLAN point B: S2 features in the M1 table
+
+- **Done (point B):** `features/sickle_m1.py` takes an optional `s2=` series and adds **15 optical
+  columns** — NDVI last/delta/mean/slope at 30 and 60 d, the smoothed green peak in a 45-day
+  window (`days_since_ndvi_max_45`, `ndvi_last_minus_max_sm_45`), NDWI last/slope, MNDWI
+  last/mean, plus `n_scenes_s2` and `days_since_clear_s2`. Table is now **2,745 rows x 57
+  features** (was 42) over the same 305 samples. Leakage test extended to poison `ndvi/ndwi/mndwi`
+  after `as_of`; both baselines re-score **byte-identical**, which is the check that the S1 side
+  and the row set were not disturbed.
+- **Design: S2 adds columns, never rows** (`test_s2_adds_columns_but_never_rows`). If an S1+S2 arm
+  dropped rows where cloud left nothing, point C's ablation would compare arms on different test
+  sets and the MAE delta would be meaningless. Measured: **0 of 2,745 rows** lack a clear S2 scene
+  in their 120-day lookback (median 9, min 2), so nothing is lost by keeping the row set fixed.
+- **Learned: the relative optical features carry the signal, the absolute ones carry none.**
+  |Spearman| with lead: `ndvi_slope_60` 0.37, `ndvi_last_minus_max_sm_45` 0.32, `ndvi_slope_30`
+  0.30 — but `ndvi_max_sm_45` 0.008 and `ndvi_mean_60` 0.013. Absolute greenness varies by plot
+  and variety; the *change* tracks phenology. Kept both (LightGBM tolerates dead columns) but this
+  is the explanation to give if S2 underperforms.
+- **Learned (matters for point C): the strongest feature in the whole table is a clock.**
+  `gdd_season` 0.75 and `days_since_season_start` 0.64 dwarf every sensor feature. LightGBM can
+  therefore reproduce the 12.0 d seasonal-mean baseline from the calendar alone and show a
+  "win" that contains no remote sensing at all. **Point C's ablation ladder should start with a
+  calendar-only arm** (calendar + weather, no sensor), so S1's and S2's contributions are measured
+  against the clock rather than against nothing. Added to the plan.
+- **Learned: cloud shows up as 18% missingness** on `ndvi_slope_30` / `ndwi_slope_30` — a 30-day
+  window often holds fewer than 2 clear scenes. Left as NaN (LightGBM splits on missing natively);
+  it is also the honest number for how often a 30-day optical trend is unavailable.
+- **Next:** point C — LightGBM as a feature-set ablation (calendar-only → S1 → S1+weather →
+  S1+S2+weather), nested tuning inside train folds, group bootstrap CIs on the dev split.

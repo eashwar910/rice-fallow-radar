@@ -33,12 +33,13 @@ heats once the canopy is cut, so thermal is a candidate feature nobody had consi
 | | Work | Produces |
 |---|---|---|
 | A ✅ | **Done 22 Nov.** **S2 per-plot series.** Extend `ingest/sickle.py`, reusing `s1_series`' mask alignment and `edge_clipped` logic. Cloud from `SCL` + `MSK_CLDPRB`; record clear-scene counts | `data/interim/sickle_s2_series.parquet` (17,625 rows; 12,560 after `best_per_date`). DATA.md §SICKLE now carries the cloud numbers: half the scenes lost, every sample still ≥ 10 clear, NDVI drops +0.121 in 75% of samples vs S1's 60% — and still fails in may-sep |
-| B | **S2 features** in `features/sickle_m1.py`: NDVI/NDWI/MNDWI last value, deltas, slopes, days-since-green-peak, days-since-last-clear-scene. Same `as_of` truncation; extend the leakage assert | Rebuilt `sickle_m1_features.parquet` |
-| C | **LightGBM as a feature-set ablation**, not one model: S1-only → S1+weather → S1+S2+weather, same lead buckets, group bootstrap CIs, out of fold on the dev split, nested tuning inside train folds | `runs/sickle_m1_lightgbm.csv` — the interim headline and the figure that justifies decision 1 |
+| B ✅ | **Done 22 Nov.** **S2 features** in `features/sickle_m1.py`: NDVI/NDWI/MNDWI last value, deltas, slopes, days-since-green-peak, days-since-last-clear-scene. Same `as_of` truncation; extend the leakage assert | `sickle_m1_features.parquet` rebuilt: 2,745 rows x 57 features, 15 from S2, **same rows as before** so the ablation is honest; baselines byte-identical |
+| C | **LightGBM as a feature-set ablation**, not one model: **calendar-only** → S1-only → S1+weather → S1+S2+weather, same lead buckets, group bootstrap CIs, out of fold on the dev split, nested tuning inside train folds | `runs/sickle_m1_lightgbm.csv` — the interim headline and the figure that justifies decision 1 |
+| | *Why the calendar arm:* `gdd_season` (Spearman 0.75 with lead) and `days_since_season_start` (0.64) dominate every sensor feature, so LightGBM can reproduce the 12.0 d seasonal-mean baseline from the clock alone. Without that arm, a "win" could contain no remote sensing at all | |
 | D | **Conformalised quantile regression.** LightGBM quantile 0.05/0.5/0.95 + split conformal on a calibration fold inside dev. Coverage and width overall **and by lead and season** | The conditional-coverage table `EVALUATION.md` promises |
 | E | *Candidate only:* **L8 thermal features**, one block, ablated. Runs only if C shows optical earns its place | Possibly a third ablation row |
 | F | **Frozen protocol:** `EVALUATION.md` §Replay protocol as v1, the four leakage checks as real CI tests (they are currently aspirational), git tag `protocol-v1` | The deliverable this phase is named after |
-| G | **Docs:** D-028 (S2 into M1), D-029 (#13 design, deferred), DATA.md S2/cloud facts, LOG entries, `ROADMAP.md` §P2 tracker, OPEN_QUESTIONS #13 marked decided | |
+| G ◐ | **Docs:** D-028 (S2 into M1) ✅, DATA.md S2/cloud facts ✅, LOG entries ✅, `ROADMAP.md` §P2 tracker ✅, MODELS.md M1 inputs ✅. Left: D-029 (#13 design, deferred) and OPEN_QUESTIONS #13 marked decided | |
 
 ## Manual side (Eashwar)
 

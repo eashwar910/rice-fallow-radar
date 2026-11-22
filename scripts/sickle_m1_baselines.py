@@ -38,6 +38,7 @@ def main() -> None:
     ex = sickle.exact_labels()
     series = pd.read_parquet("data/interim/sickle_s1_series.parquet")
     weather = pd.read_parquet("data/interim/sickle_weather.parquet")
+    s2 = pd.read_parquet("data/interim/sickle_s2_series.parquet")
     tiles = sickle.sample_tiles(labels=ex)
     dev, test = splits.dev_test(ex)
     print(
@@ -45,14 +46,16 @@ def main() -> None:
         f"test (locked, untouched) {len(test)} / {test.group.nunique()}"
     )
 
-    feats = F.build(pd.concat([dev, test]), series, weather, tiles)
+    feats = F.build(pd.concat([dev, test]), series, weather, tiles, s2)
     FEAT.parent.mkdir(parents=True, exist_ok=True)
     feats.to_parquet(FEAT)
     dev_f = feats[feats.unique_id.isin(dev.UNIQUE_ID)].reset_index(drop=True)
     print(
-        f"features: {len(feats)} rows x {len(F.feature_columns(feats))} features, "
+        f"features: {len(feats)} rows x {len(F.feature_columns(feats))} features "
+        f"({sum(c.startswith(F.S2_PREFIXES) for c in F.feature_columns(feats))} from S2), "
         f"{feats.unique_id.nunique()} samples ({len(dev_f)} dev rows); -> {FEAT}"
     )
+    print(f"rows with no clear S2 scene in the lookback: {feats.n_scenes_s2.eq(0).sum()}")
 
     # one fold assignment per sample, so all issue dates of a sample stay on the same side
     per_sample = dev_f.drop_duplicates("unique_id")[["unique_id", "group", "season"]]

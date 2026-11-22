@@ -14,18 +14,27 @@ from rice_fallow_radar.features import sickle_m1 as F
 from rice_fallow_radar.models import m1_baselines as B
 
 SERIES = "data/interim/sickle_s1_series.parquet"
+S2_SERIES = "data/interim/sickle_s2_series.parquet"
 pytestmark = pytest.mark.skipif(
     not pd.io.common.file_exists(SERIES), reason="needs scripts/sickle_extract_check.py output"
 )
+needs_s2 = pytest.mark.skipif(
+    not pd.io.common.file_exists(S2_SERIES),
+    reason="needs scripts/sickle_s2_extract_check.py output",
+)
 
 
-def _labels_and_series(n: int = 25):
+def _labels_and_series(n: int = 25, with_s2: bool = False):
     from rice_fallow_radar.ingest import sickle
 
     ex = splits.with_groups(sickle.exact_labels())
     s = pd.read_parquet(SERIES)
     keep = ex.UNIQUE_ID.head(n)
-    return ex[ex.UNIQUE_ID.isin(keep)], s[s.unique_id.isin(keep)]
+    out = [ex[ex.UNIQUE_ID.isin(keep)], s[s.unique_id.isin(keep)]]
+    if with_s2:
+        s2 = pd.read_parquet(S2_SERIES)
+        out.append(s2[s2.unique_id.isin(keep)])
+    return tuple(out)
 
 
 def test_features_ignore_scenes_after_as_of():
@@ -40,6 +49,32 @@ def test_features_ignore_scenes_after_as_of():
     out = F.build(lab, poisoned)
     cols = F.feature_columns(clean)
     pd.testing.assert_frame_equal(clean[cols], out[cols])
+
+
+@needs_s2
+def test_s2_features_ignore_scenes_after_as_of():
+    lab, s, s2 = _labels_and_series(with_s2=True)
+    clean = F.build(lab, s, s2=s2)
+    assert clean.n_scenes_s2.gt(0).all(), "fixture rows have no clear S2 scene to leak from"
+    poisoned = s2.copy()
+    after = poisoned.lead_days < F.MIN_LEAD
+    assert after.any(), "fixture has no post-as_of S2 scenes, so this test would prove nothing"
+    poisoned.loc[after, ["ndvi", "ndwi", "mndwi"]] = -999.0
+    out = F.build(lab, s, s2=poisoned)
+    cols = F.feature_columns(clean)
+    pd.testing.assert_frame_equal(clean[cols], out[cols])
+
+
+@needs_s2
+def test_s2_adds_columns_but_never_rows():
+    """The feature-set ablation is only honest if both arms score the same rows."""
+    lab, s, s2 = _labels_and_series(with_s2=True)
+    s1_only, both = F.build(lab, s), F.build(lab, s, s2=s2)
+    pd.testing.assert_frame_equal(s1_only, both[s1_only.columns])
+    added = set(F.feature_columns(both)) - set(F.feature_columns(s1_only))
+    assert added and all(c.startswith(F.S2_PREFIXES) for c in added), added
+    # a stale optical read must be visible to the model, not silently passed off as fresh
+    assert both.days_since_clear_s2.max() > 10
 
 
 def test_every_row_predates_its_harvest():
