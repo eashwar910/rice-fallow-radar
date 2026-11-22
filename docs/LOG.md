@@ -105,3 +105,32 @@ Suggested shape per entry — use whatever is useful:
   date, so it is not a protocol change.
 - **Next:** LightGBM on the SICKLE feature table (the interim headline), then decide #13 before
   the 30 Nov freeze.
+
+## 2026-11-22 (second session) — FREEZE_PLAN point A: S2 per-plot series
+
+- **Done (point A):** `ingest.sickle.s2_series` + `scripts/sickle_s2_extract_check.py` →
+  `data/interim/sickle_s2_series.parquet` (17,625 rows, 12,560 after de-duplicating overlapping
+  tiles). NDVI/NDWI/MNDWI per plot per scene, cloud-masked from `SCL` + `MSK_CLDPRB`, reusing
+  `s1_series`' index-only mask alignment and `edge_clipped` rule; the 20 m bands are upsampled 2×
+  onto the 10 m mask grid. Runs in 10 s with no Earth Engine call. Tests in `tests/test_sickle_s2.py`.
+  All numbers in `DATA.md` §SICKLE.
+- **Learned: decision 1 of the freeze plan holds.** NDVI falls monotonically *through* the forecast
+  window (0.569 at 21–30 d before harvest → 0.457 at 7–14 d → 0.384 after), and the per-sample drop
+  across harvest is **+0.121 in 75% of samples** against S1's +0.51 dB in 60%. Crucially, the
+  optical decline starts before harvest, where S1's drop only happens at it — so S2 is forecast
+  signal, not just detection signal.
+- **Learned: S2 does not rescue may-sep** (−0.028, dropping in 37% — S1 was −0.49 dB, 42%). The
+  monsoon harvest is hidden from both sensors. The per-season split stays mandatory and may-sep
+  stays the honest weak point of M1.
+- **Learned: cloud costs half the S2 record but blocks nothing.** 51.7% of scenes lose every plot
+  pixel and the unclear rate peaks Sep–Jan (77% in Sept) — the north-east monsoon, i.e. exactly
+  the window for Jan–Mar harvests. Even so every sample keeps ≥ 10 clear scenes (median 21), and
+  only 28 of 305 have no clear scene inside 7–21 days. A 2,123-scene audit confirms the loss is
+  real cloud (53.7% SCL cloud classes) and **0.0% no-data**, so the upsampled mask is landing
+  correctly. `MSK_CLDPRB` adds 0.3% over SCL, so SCL alone would do.
+- **Learned (trap): tile overlap double-counts 121 of 305 samples** — the same acquisition ships
+  under two MGRS tiles (5,065 of 17,625 rows). Copies agree to a median 0.0035 NDVI, so
+  `sickle.best_per_date` keeps the less-clouded one. Feature code must call it.
+- **Next:** point B — NDVI/NDWI/MNDWI features in `features/sickle_m1.py` (last value, deltas,
+  slopes, days-since-green-peak, days-since-last-clear-scene) under the same `as_of` truncation
+  and leakage assert, then point C's feature-set ablation.

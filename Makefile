@@ -18,8 +18,9 @@ fmt:
 registry:  ## FTW polygons -> data/processed/fields.parquet + stats table
 	uv run python scripts/build_field_registry.py
 
-sickle:  ## SICKLE per-plot S1 series, regional weather, M1 feature table and baselines
+sickle:  ## SICKLE per-plot S1/S2 series, regional weather, M1 feature table and baselines
 	uv run python scripts/sickle_extract_check.py
+	uv run python scripts/sickle_s2_extract_check.py
 	uv run python scripts/sickle_weather_pull.py
 	uv run python scripts/sickle_m1_baselines.py
 
