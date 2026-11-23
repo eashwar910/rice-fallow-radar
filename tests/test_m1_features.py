@@ -85,7 +85,7 @@ def test_every_feature_belongs_to_exactly_one_block():
     f = F.build(lab, s, s2=s2)
     cols = F.feature_columns(f)
     assert [c for c in cols if F.block_of(c) == "unknown"] == []
-    blocks = ("base", "s1", "weather", "s2")
+    blocks = ("base", "area", "s1", "weather", "s2")
     assert sorted(F.block_columns(f, blocks)) == sorted(cols)
     # the blocks partition: no column appears in two of them
     assert sum(len(F.block_columns(f, (b,))) for b in blocks) == len(cols)

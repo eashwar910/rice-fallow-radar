@@ -74,3 +74,27 @@ def gain_importance(dev: pd.DataFrame, cols: list[str], seed: int = splits.SEED)
     """Total-gain importance from one fit on all dev rows. Diagnostic only, never a result."""
     m = _fit(dev, cols, _tune(dev, cols, seed), seed)
     return pd.Series(m.booster_.feature_importance("gain"), index=cols).sort_values(ascending=False)
+
+
+def pool_predictions(df: pd.DataFrame, pred: np.ndarray) -> pd.DataFrame:
+    """Average a field's repeated estimates of the same harvest date (D-030).
+
+    `lead` is predicted independently at each of a field's ~9 weekly issue dates, which throws
+    away eight estimates of one quantity. Each prediction is converted to an implied harvest
+    date and the forecast at `as_of` is the running mean of the implied dates from the issue
+    dates **at or before `as_of`**; plain equal weighting beat every recency weighting tested.
+
+    Returns `pooled` (the pooled prediction, in days to harvest, on `df`'s own index) and
+    `n_acc` (how many estimates that row averages -- pooling is neutral at 1-2 and worth ~1 d
+    by the fourth, so anything calibrated on these predictions must condition on it).
+
+    `build()` emits rows lead-ascending, i.e. **`as_of` descending**, so an expanding window
+    over the table's own row order would read the future; hence the explicit sort.
+    """
+    as_of = df.as_of.map(pd.Timestamp.toordinal).astype(float)
+    order = df.sort_values(["unique_id", "as_of"]).index
+    implied = (as_of + np.asarray(pred, float)).loc[order]
+    by_field = implied.groupby(df.unique_id.loc[order])
+    pooled = by_field.expanding().mean().reset_index(level=0, drop=True) - as_of.loc[order]
+    out = pd.DataFrame({"pooled": pooled, "n_acc": by_field.cumcount() + 1})
+    return out.reindex(df.index)

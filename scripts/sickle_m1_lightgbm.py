@@ -1,9 +1,11 @@
-"""P2 / FREEZE_PLAN point C: LightGBM on SICKLE as a feature-set ablation, not one model.
+"""P2 / FREEZE_PLAN point C (+ C2): LightGBM on SICKLE as a feature-set ablation, not one model.
 
-The question is not "can LightGBM beat 12.0 days" but "which inputs earn their place". Five arms
+The question is not "can LightGBM beat 12.0 days" but "which inputs earn their place". Eight arms
 on identical rows and identical folds:
 
-    base            calendar position + plot size + season -- no satellite at all
+    calendar-4      calendar position + season -- no satellite at all (D-030's point model)
+    base-5          + plot size: point C's published arm, kept so the 7.41 d row stays in the
+                    table after D-030 dropped `area_acres` from the base block
     base+s1         add the radar block
     base+s1+weather add regional CHIRPS/ERA5-Land
     base+s2+weather optical instead of radar (does S1 earn its place?)
@@ -12,7 +14,13 @@ on identical rows and identical folds:
     sensors only    s1+s2+weather with no calendar -- separates "no signal" from "redundant
                     with the clock", which are very different findings
 
-`base` exists because `gdd_season` and `days_since_season_start` dominate every sensor feature
+Every arm is also reported **pooled** (`+pool`): a field's ~9 weekly estimates of its one
+harvest date averaged over the issue dates at or before `as_of` (D-030, `L.pool_predictions`).
+And every subset is also cut by **shared vs unique harvest date** (C'), because the pooled MAE
+averages a 5 d regime where the sensors are significantly worse with a 10 d regime where they
+are significantly better. The cut conditions on the label: a diagnostic, never a selector.
+
+`calendar-4` exists because `gdd_season` and `days_since_season_start` dominate every sensor feature
 (Spearman 0.75 and 0.64 with lead), so a model given the clock alone can reproduce the seasonal-
 mean baseline. Without this arm a "win" could contain no remote sensing. `season` is handed to
 every arm as a categorical so no arm is less informed than the seasonal-mean baseline.
@@ -37,7 +45,8 @@ from rice_fallow_radar.models import m1_lightgbm as L
 FEAT = Path("data/processed/sickle_m1_features.parquet")
 RESULTS = Path("runs/sickle_m1_lightgbm.csv")
 ARMS = {
-    "base": ("base",),
+    "calendar-4": ("base",),
+    "base-5": ("base", "area"),
     "base+s1": ("base", "s1"),
     "base+s1+weather": ("base", "s1", "weather"),
     "base+s2+weather": ("base", "s2", "weather"),
@@ -47,6 +56,7 @@ ARMS = {
     "s1 only": ("s1",),
     "sensors only": ("s1", "weather", "s2"),
 }
+REF = "calendar-4"  # the arm every sensor arm has to beat (FREEZE_PLAN F, EVALUATION O1)
 
 
 def table(name: str, df: pd.DataFrame, pred_cols: list[str]) -> pd.DataFrame:
@@ -67,13 +77,22 @@ def main() -> None:
     print(f"dev {dev.unique_id.nunique()} samples / {dev.group.nunique()} groups, {len(dev)} rows")
     print("fold sizes (samples):", dev.groupby(fold).unique_id.nunique().to_dict())
 
+    dev["shared_date"] = F.shared_harvest_date(dev)
+    print(
+        f"shared harvest date: {dev.shared_date.mean():.1%} of rows, "
+        f"{dev[dev.shared_date].unique_id.nunique()} of {dev.unique_id.nunique()} samples"
+    )
+
     tuning = []
     for arm, blocks in ARMS.items():
         cols = F.block_columns(dev, blocks) + (["season_cat"] if "base" in blocks else [])
         dev[arm], chosen = L.oof_predict(dev, cols, fold)
+        pooled = L.pool_predictions(dev, dev[arm])
+        dev[arm + "+pool"], dev["n_acc"] = pooled.pooled, pooled.n_acc
         tuning += [dict(arm=arm, n_features=len(cols), fold=k, **p) for k, p in enumerate(chosen)]
-        mae, lo, hi = B.bootstrap_mae(dev[arm] - dev.lead, dev.group)
-        print(f"  {arm:<16} {len(cols):>2} features  MAE {mae:5.2f} [{lo:.2f}, {hi:.2f}]")
+        for name in (arm, arm + "+pool"):
+            mae, lo, hi = B.bootstrap_mae(dev[name] - dev.lead, dev.group)
+            print(f"  {name:<22} {len(cols):>2} features  MAE {mae:5.2f} [{lo:.2f}, {hi:.2f}]")
 
     # the baselines on the same folds, so the table is self-contained
     for name, fn in {"seasonal_mean": B.seasonal_mean, "vh_peak_rule": B.vh_peak_rule}.items():
@@ -82,13 +101,19 @@ def main() -> None:
             te = dev[fold == k]
             dev.loc[te.index, name] = fn(dev[fold != k], te)
 
-    cols = list(ARMS) + ["seasonal_mean", "vh_peak_rule"]
+    arms = list(ARMS) + [a + "+pool" for a in ARMS]
+    cols = arms + ["seasonal_mean", "vh_peak_rule"]
     out = [table("all leads", dev, cols)]
     for h, (lo, hi) in F.LEAD_BUCKETS.items():
         out.append(table(f"lead {h}d ({lo}-{hi})", dev[dev.lead.between(lo, hi)], cols))
     for s, g in dev.groupby("season"):
         if len(g) >= 50:
             out.append(table(f"season {s}", g, cols))
+    # the label-quality stratum (C'): the two halves are a 5 d and a 10 d error regime
+    for shared, g in dev.groupby("shared_date"):
+        out.append(table("shared-date plots" if shared else "unique-date plots", g, cols))
+    for n, g in dev.groupby(dev.n_acc.clip(upper=5)):
+        out.append(table(f"n_acc {int(n)}{'+' if n == 5 else ''}", g, cols))
     res = pd.concat(out, ignore_index=True)
     res[["mae", "lo", "hi"]] = res[["mae", "lo", "hi"]].round(2)
 
@@ -100,17 +125,34 @@ def main() -> None:
         block=lambda d: d.feature.map(F.block_of)
     ).to_csv(RESULTS.with_name(RESULTS.stem + "_importance.csv"), index=False)
 
-    print("\nout-of-fold MAE in days (95% CI over neighbour groups), dev split only:\n")
-    piv = res.assign(v=res.apply(lambda r: f"{r.mae:5.2f} [{r.lo:.2f}, {r.hi:.2f}]", axis=1))
-    print(piv.pivot(index="subset", columns="model", values="v")[cols].to_string())
-    print("\npaired differences vs base, all leads (per-row absolute error, same rows):")
+    piv = res.assign(v=res.apply(lambda r: f"{r.mae:5.2f} [{r.lo:.2f}, {r.hi:.2f}]", axis=1)).pivot(
+        index="subset", columns="model", values="v"
+    )
+    for label, group in {
+        "raw (one prediction per issue date)": list(ARMS) + ["seasonal_mean", "vh_peak_rule"],
+        "pooled (D-030)": [a + "+pool" for a in ARMS],
+    }.items():
+        print(f"\nout-of-fold MAE in days, {label} -- 95% CI over neighbour groups, dev only:\n")
+        print(piv[group].to_string())
     err = {a: (dev[a] - dev.lead).abs() for a in cols}
-    for a in cols:
-        if a == "base":
-            continue
-        gap, lo, hi = B.bootstrap_mean(err[a] - err["base"], dev.group)
-        verdict = "better" if hi < 0 else "worse" if lo > 0 else "not separated"
-        print(f"  {a:<16} {gap:+6.2f} d [{lo:+.2f}, {hi:+.2f}]  {verdict}")
+    for ref in (REF, REF + "+pool"):
+        print(f"\npaired differences vs {ref}, all leads (per-row absolute error, same rows):")
+        for a in cols:
+            if a == ref or a.endswith("+pool") != ref.endswith("+pool"):
+                continue
+            gap, lo, hi = B.bootstrap_mean(err[a] - err[ref], dev.group)
+            verdict = "better" if hi < 0 else "worse" if lo > 0 else "not separated"
+            print(f"  {a:<22} {gap:+6.2f} d [{lo:+.2f}, {hi:+.2f}]  {verdict}")
+    print(f"\nthe same, on each half of the label-quality stratum, {REF} as reference:")
+    for shared, g in dev.groupby("shared_date"):
+        print(f"  {'shared' if shared else 'unique'}-date plots (n={len(g)}):")
+        for a in arms:
+            if a == REF:
+                continue
+            e = (g[a] - g.lead).abs() - (g[REF] - g.lead).abs()
+            gap, lo, hi = B.bootstrap_mean(e, g.group)
+            verdict = "better" if hi < 0 else "worse" if lo > 0 else "not separated"
+            print(f"    {a:<22} {gap:+6.2f} d [{lo:+.2f}, {hi:+.2f}]  {verdict}")
     print("\ntop 12 by total gain (one fit on all dev rows, diagnostic only):")
     print(imp.head(12).round(0).to_string())
     print(

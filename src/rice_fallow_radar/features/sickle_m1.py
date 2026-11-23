@@ -61,14 +61,19 @@ S1_PREFIXES = (
     "days_since_scene",
     "days_since_vh",
 )
-# what the model knows without any satellite: where in the season it is, and how big the plot is
-BASE_COLS = ("days_since_season_start", "doy_sin", "doy_cos", "area_acres")
+# what the model knows without any satellite: where in the season it is. `area_acres` used to sit
+# here and is now its own block -- D-030 measured it as a noise feature (every one of the six best
+# base subsets excludes it; keeping it costs 0.24 d), so it stays in the table, out of the model,
+# and available as the `base-5` arm that reproduces point C's published row.
+BASE_COLS = ("days_since_season_start", "doy_sin", "doy_cos")
 
 
 def block_of(col: str) -> str:
     """Which ablation block a feature column belongs to: base, s1, weather, s2 or unknown."""
     if col in BASE_COLS:
         return "base"
+    if col == "area_acres":
+        return "area"
     if col.startswith(S2_PREFIXES):  # before s1: `n_scenes_s2` would match `n_scenes`
         return "s2"
     if col.startswith(WEATHER_PREFIXES):
@@ -76,6 +81,19 @@ def block_of(col: str) -> str:
     if col.startswith(S1_PREFIXES):
         return "s1"
     return "unknown"
+
+
+def shared_harvest_date(df: pd.DataFrame, k: int = 3) -> pd.Series:
+    """True where the row's plot shares its harvest date with at least `k`-1 other plots.
+
+    A label-quality diagnostic, never an operational selector: it conditions on the answer. 59%
+    of dev rows sit in such a cluster (farmer recall rounding to a village date) and a cluster
+    spans 3.4 neighbour groups, so D-022's grouped folds do not contain it -- which is why the
+    pooled point-C null averages two opposite regimes (LOG 23 Nov, D-031).
+    """
+    per = df.drop_duplicates("unique_id")
+    n = per.groupby("harvest").plot_id.nunique()
+    return df.unique_id.isin(per[per.harvest.map(n) >= k].unique_id)
 
 
 def block_columns(df: pd.DataFrame, blocks: tuple[str, ...]) -> list[str]:
