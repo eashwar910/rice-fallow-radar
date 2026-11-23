@@ -230,3 +230,114 @@ Suggested shape per entry — use whatever is useful:
   per 500-tree fit) — thread contention on tiny data. Pinned to 1; the full 7-arm run is ~12 min.
 - **Next:** point D — conformalised quantile regression on the best arm, coverage and width by
   lead and season. Then F, the freeze, where the success criterion needs rewording.
+
+## 2026-11-23 — re-opening point C: why the sensors lost, and a 7.41 → 6.32 d point model
+
+Asked to find a way back on track after point C's negative result, disregarding what the docs
+prescribed. Everything below is dev-split only; the locked test groups were never read. Diagnostic
+scripts are in the session scratchpad (`diag2`–`diag8`, `select`, `pool2`, `base_abl`, `final`) and
+are **not** in the repo — the findings that survive are recorded here, in `DATA.md` §SICKLE, and in
+D-030/D-031. Absolute MAEs from the exploratory scripts use fixed hyperparameters; every number
+quoted as a result is from `final.py`, which uses the published nested-tuning protocol and
+reproduces `runs/sickle_m1_lightgbm.csv` exactly (base-5 7.41, all-57 7.85, seasonal mean 11.99).
+
+### The mechanism behind the pooled null: the labels collapse onto village dates
+
+**Learned: 56% of dev feature rows belong to plots sharing a harvest date with ≥ 2 others**, and a
+shared-date cluster spans a mean of **3.4 neighbour groups** — so D-022's grouped folds do not
+contain it. Stratify on it and point C's null splits into two significant, opposite results:
+calendar-only scores **4.94 d on shared-date plots** where every sensor arm is **worse** (+1.5 to
++1.8 d), and **10.29 d on unique-date plots** where `base+s1` is **better** (−1.26 d
+[−1.99, −0.12]). Crossing with distance from the season median shows the sign tracks the label and
+not the difficulty (sensors lose on shared dates in both halves, +1.54/+1.45; win on unique dates
+in both, −1.52/−1.06, including on the *easier* unique half). Full numbers in DATA.md §SICKLE.
+**So the radar does earn its place — on the plots whose labels admit it.** The split conditions on
+the label, so it is a label-quality diagnostic, never an operational selector; say so every time.
+
+### What determines harvest date here, and why the satellite cannot have it
+
+**Learned: `VARIETY` and `TRANSPLANTING_DATE` were sitting unused in the tabular CSV, and together
+they are worth −3.09 d.** `harvest = transplanting + median duration per (season, variety)` scores
+**6.39 d leave-one-group-out**, beating the whole 58-feature model; given both, LightGBM reaches
+**4.60 d** [−3.93, −2.48]. Variety nearly determines duration (IR 50 deviates 0.0 d, CR 1009 2.3).
+**Learned: that ceiling is unreachable, and the reason is the finding.** Transplanting
+day-of-season has sd **10.0 d**; a learned detector scores 6.03 d and *loses to the season median*
+(5.94 d). Duration is the input that matters, and the coarse 3-class version classifies at 79.7%
+(63.5% majority) — but a perfect coarse class is worth only 0.52 d and at 79.7% the end-to-end gain
+is **0.00 d**. Harvest date in the Cauvery delta is set by a planting decision plus genetics; the
+delta is irrigated and scheduled, so there is no timing variation for a satellite to see. **This is
+the measured source-domain result that M2's rainfed prediction now rests on** (D-031).
+
+### Feature selection: nothing beats the clock, and the search is not at fault
+
+Ran Boruta (shadow features), greedy forward and simulated annealing, every selection nested inside
+the outer folds, each subset scored on two inner splits of the *pooled* objective with a 0.05 d
+minimum-improvement threshold. **Every method lost to the 5 base columns** (base-5 7.31 fixed-param;
+Boruta survivors 7.74; annealing 7.82; greedy **8.18, significantly worse**, +0.87 [+0.39, +1.48]).
+**Learned (the strongest form of the null): the *leaky* searches, allowed to select on all dev rows,
+reached only 6.73 and 6.77 d pooled against plain base-5 + pooling at 6.27.** When a search that can
+see the answers cannot beat five calendar columns, the problem is not the search.
+
+**Learned: 22 of 53 features cannot beat a random permutation of themselves** (≤ 20% of Boruta runs),
+and they fall into families: every `days_since_*` column, every `last_minus_max` difference, and most
+single-date values (`vh_last`, `vv_last`, `ndwi_last`, `mndwi_last`), plus `px_plot`, `n_scenes_30/60`,
+`rain_14d_mm`, `vh_slope_30`, `vh_sd_60`, `ndvi_mean_60`, `ndvi_max_sm_45`. Survival by block:
+**weather 10/12, S1 11/26, S2 5/15** — the optical block from point B survives worst, which is a
+sharper close-out for D-028 than "no measurable pooled gain".
+**Learned (worth a methods paragraph): relevance is not utility.** Boruta *confirmed* 26 features as
+carrying genuine signal and feeding exactly those 26 made the model 0.43 d worse than feeding five.
+Boruta tests association with the target, not whether a feature improves generalisation once the
+clock already explains the target.
+Per-feature, added to base one at a time: 16 of 53 improve MAE, **1** has a CI excluding zero
+(`days_since_scene`, −0.22 [−0.36, −0.00] — the radar revisit counter, not crop state), and **14 are
+significantly worse**, led by the S2 block (`ndvi_mean_30` +0.44 [+0.25, +0.65]).
+
+### What did work: temporal pooling, and dropping `area_acres`
+
+**Learned: the model threw away eight estimates of the same quantity.** Each field gets ~9 weekly
+issue dates and `lead` was predicted independently at each. Converting each prediction to an implied
+harvest date and taking the running mean over issue dates **at or before `as_of`** improves every
+feature set tested (−0.96, −0.92, −0.67 d for calendar-4, base-5, all-57). Plain equal weighting beat
+every alternative (expanding mean 6.27 fixed-param, EWM half-life 8 6.37, trimmed 6.41, median 6.57,
+shrinkage to the season mean 7.04) — **older estimates are as good as recent ones, which is itself
+another confirmation that the signal is the clock and not a ripening crop.** Pooling needs ≥ 3
+accumulated estimates to pay (n=1 7.51 → 7.51; n=4 6.94 → 5.75), so the forecaster is weakest in its
+first fortnight on a field; an argument for starting rows at transplanting rather than 57 d out.
+**Learned: `area_acres` is a noise feature.** All 31 subsets of the base block were scored: the six
+best all exclude it, and keeping it costs 0.24 d.
+
+### The point model, under the published protocol
+
+| arm | MAE (d) | unique-date | 7 d | 14 d | 21 d |
+|---|---|---|---|---|---|
+| **calendar-4 + pooling** | **6.32 [4.97, 7.99]** | 8.42 | 6.16 | 6.16 | 6.08 |
+| base-5 + pooling | 6.49 [5.17, 8.16] | 8.61 | 6.37 | 6.36 | 6.22 |
+| all-57 + pooling | 7.17 [5.88, 8.66] | 8.47 | 6.62 | 6.69 | 6.82 |
+| calendar-4 | 7.29 [5.48, 9.20] | 10.27 | 7.81 | 7.57 | 7.70 |
+| base-5 (published best) | 7.41 [5.67, 9.26] | 10.40 | 7.58 | 7.85 | 8.02 |
+| all-57 (published) | 7.85 [6.45, 9.21] | 9.36 | 7.67 | 7.51 | 7.73 |
+| seasonal mean | 11.99 [9.87, 14.29] | 13.89 | 11.99 | 11.99 | 11.99 |
+
+**7.41 → 6.32 d, and 8.02 → 6.08 d at the 21-day horizon; the proposal's ≤ 7 d is met at all three.**
+Features: `days_since_season_start`, `doy_sin`, `doy_cos`, `season` — **no satellite data at all.**
+Honest layering of that claim, because it will be asked: the *forecaster's inputs* are empty of Earth
+observation (`season` comes from SICKLE's survey column), the satellite gates **126 of 2,871**
+candidate rows (4.4%, via 14 plots with no usable S1 series), and the system around M1 is entirely
+satellite-dependent — field boundaries, the rice mask, whether the field is still standing (M1's own
+precondition), and in Odisha the season assignment too. **The satellite decides which field to ask
+about and when the question expires; it does not help answer "how many days left".**
+
+### Honest limitations
+
+Every CI on the pooling and selection results includes zero — the evidence is consistency across
+three feature sets, three lead buckets and nine accumulation levels, plus the leaky-search null.
+The `area_acres` drop and the choice of pooling rule were made on dev without nesting that choice,
+so ~0.2 d of the 6.32 is selection optimism; the robust claims are "pooling helps by ~1 d" and
+"`area_acres` hurts across every cut". 33 groups still give ±1.5 d half-widths. Two things I tested
+and will not pursue: widening `MAX_LEAD` to 120 (base 7.31 → 9.17, and the sensor advantage inside
+the lead buckets vanishes) and dropping `angle_last`/`px_*` from the S1 arm (worse by +0.67 d — the
+LOG 22 Nov open ablation, now closed).
+
+### Next
+
+Point C2 (wire the two changes in), then point D on the pooled predictions — see FREEZE_PLAN.

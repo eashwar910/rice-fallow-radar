@@ -123,7 +123,20 @@ This set is the backbone of M2 and also validates the radar harvest detector tha
    beats the 12.0 d baseline — but it is the **calendar-only** arm, and no arm carrying satellite
    data separates from it. Sensors with no calendar reach 7.86 d, so the two information sources
    are redundant rather than one being useless. See LOG 22 Nov; this reframes P3.
-3. Conformalised quantile regression for intervals; check coverage.
+2b. **Re-opened 23 Nov (FREEZE_PLAN C′) and the null now has a mechanism and a better model.**
+   (a) 56% of dev rows sit on harvest dates **shared across plots** — farmer recall rounding to a
+   village date, spanning 3.4 neighbour groups, so grouped folds do not contain it. Stratify and the
+   null splits in two: calendar **4.94 d** where sensors are significantly *worse*, **10.29 d** where
+   `base+s1` is significantly *better*. (b) Harvest date here is set by **variety + transplanting**
+   (oracle **4.60 d**), and the delta is too tightly scheduled for a satellite to recover either
+   (transplanting sd 10.0 d; a learned detector loses to the season median) — D-031 turns that into a
+   pre-registered prediction for Odisha. (c) **A better point model: 7.41 → 6.32 d** [4.97, 7.99], and
+   6.16 / 6.16 / 6.08 d at 7/14/21 days, from temporal pooling across issue dates plus dropping 53
+   features — D-030. No feature-selection algorithm beat the clock, including ones allowed to cheat.
+   Next: C″ wires it into the code, which must land before step 3.
+3. Conformalised quantile regression for intervals; check coverage. **From C′:** calibrate on the
+   *pooled* predictions and report conditional coverage by shared/unique harvest date as well as by
+   lead and season — the two strata are a 4.94 d and a 10.29 d error regime.
 4. Temporal CNN; LSTM as a comparison if time allows.
 5. Grouped splits by plot, year and spatial block; bootstrap CIs.
 
@@ -192,7 +205,7 @@ Any of these should be noted in `DECISIONS.md` and acknowledged as a limitation.
 | P0 Setup | ✅ Done (13 Nov) | See P0 step tracker |
 | P1 Pipeline | ✅ Field registry done (19 Nov) | `data/processed/fields.parquet`, 292,060 fields; feature builder exists for SICKLE, not yet for Odisha |
 | P1b Odisha labels | ✅ Labelled (20 Nov) | 153 harvest intervals of 200 fields; `data/processed/odisha_labels.parquet`, 60% eval-locked. See DATA.md §Odisha hand labels |
-| P2 M1 | In progress | LightGBM ablation done (FREEZE_PLAN A–C, 22 Nov): 7.41 d best, but calendar-only wins and no sensor arm separates. Conformal intervals (D) next, then the freeze (F) |
+| P2 M1 | In progress | LightGBM ablation done (FREEZE_PLAN A–C, 22 Nov): 7.41 d best, but calendar-only wins and no sensor arm separates. **C′ (23 Nov) explains why — 56% of harvest dates are shared village dates — and gets 7.41 → 6.32 d from temporal pooling (D-030); C″ wires it in.** Conformal intervals (D) next, then the freeze (F) |
 | Protocol freeze | Not started | |
 | P3 M2 | Not started | |
 | P4 M3/M4 | Not started | |
