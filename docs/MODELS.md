@@ -62,6 +62,53 @@ All four components are built in this project; the methods they use are publishe
 
 **The research payoff:** "how much is lost, how much is recovered, and here's evidence for why" is the most publishable piece. Keep it clean even if other parts shrink.
 
+### Design note — the "Odisha-calendar" ablation arm (D-033, added 23 Nov 2026)
+
+**The problem this arm exists to expose.** M1's point model is four calendar features and no
+satellite data (D-030). Transferring it zero-shot to Odisha therefore transfers *Tamil Nadu's
+planting schedule*, which is the single component we have a positive reason to expect not to
+survive (D-031). A plain zero-shot number then conflates two very different failures — "the model
+does not transfer" and "the model's clock is set to the wrong region" — and attribution cannot
+separate them, because both live in the same four columns.
+
+**The arm.** Replace the SICKLE-learned calendar with a calendar measured *in the target region*
+from CSISA — the district's transplanting-date distribution and its per-variety duration
+distribution (`features/odisha_calendar.py`). Three arms on the same Odisha rows:
+
+| arm | calendar from | sensors | what a win means |
+|---|---|---|---|
+| zero-shot M1 | SICKLE (Tamil Nadu) | per-field | the whole model transfers |
+| **Odisha-calendar (zero-shot)** | **CSISA Baleswar** | **none — one date for every field** | **nothing per-field transferred; the gap was the clock** |
+| adapted M1 | SICKLE + adaptation | per-field | adaptation recovered something |
+
+`odisha_calendar.zero_shot_harvest` makes the middle arm deliberately **field-independent**: one
+harvest date and one interval for the entire district, read off a 2018 farmer survey. It is a floor,
+and a harsh one — it is the Odisha analogue of the calendar-only arm that beat every sensor arm on
+SICKLE. The interesting outcome is the one where it wins.
+
+**How the three readings differ.**
+- *Odisha-calendar ≈ adapted M1* → the sensors contribute nothing in Odisha either, and the M2
+  story becomes "the transferable part of this task is a calendar", which D-031 says should be
+  reported, not hidden.
+- *Odisha-calendar ≫ zero-shot M1, and adapted M1 beats both* → the transfer gap was substantially
+  a calendar shift, and adaptation is doing real per-field work on top. This is the result the
+  TimeMatch-style shift estimation predicts, and the arm is what makes the claim measurable rather
+  than assertive.
+- *zero-shot M1 beats the Odisha-calendar arm* → Tamil Nadu's calendar generalises better than a
+  seven-year-old local survey, which is itself a finding about what "domain" means here.
+
+**What it costs:** almost nothing to run (a table lookup), and it needs no Odisha labels to build,
+only to score. The honest caveats are in D-033(c): 2017/2018 data against a 2025–26 label season,
+so the arm assumes a stationary planting calendar — the assumption a rainfed district most
+threatens. That assumption is itself worth an ablation if the replay ever makes it testable.
+
+**Known risk, flagged before scoring.** The Baleswar prior's 90% harvest interval is ~21 days wide
+(12 Dec ± ~10 d for a 2025–26 season), while the hand labels' harvest midpoints span about 13 weeks
+(DATA.md §Odisha hand labels). A single district-wide date cannot cover that spread, so the arm will
+probably lose on coverage while remaining competitive on MAE — which is the comparison that makes
+it informative. **Not scored yet:** D-031 requires the registry transplanting-spread measurement
+before any Odisha harvest model is tuned, so this arm is built and left unrun until P3.
+
 ---
 
 ## M3 — Sowing window

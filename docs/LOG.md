@@ -341,3 +341,185 @@ LOG 22 Nov open ablation, now closed).
 ### Next
 
 Point C2 (wire the two changes in), then point D on the pooled predictions — see FREEZE_PLAN.
+
+## 2026-11-23 (second session) — FREEZE_PLAN C″ and D: the pooled model in the code, and intervals
+
+Both points landed. Dev split only; the locked test groups were never read.
+
+### C″ — the C′ findings are now code, not notes
+
+* `BASE_COLS` loses `area_acres`, which becomes its own `area` block. The column stays in the
+  table (and in the ablation, as the `base-5` arm that reproduces point C's published 7.41 d row)
+  and leaves the model, per D-030.
+* `models.m1_lightgbm.pool_predictions()` + `tests/test_m1_pooling.py`.
+* `scripts/sickle_m1_lightgbm.py` now reports **every arm twice, raw and pooled**, and cuts every
+  subset by **shared/unique harvest date** and by **accumulation count** (`n_acc`).
+* `features.sickle_m1.shared_harvest_date()` fixes the label-quality stratum in code.
+
+**The leakage trap FREEZE_PLAN warned about was real, and the test caught it.** The first
+`pool_predictions` added the prediction vector *in table order* to the `as_of` column *in sorted
+order*, so almost every pooled value belonged to a different issue date than the row it was
+written to. Nothing in the MAE looked wrong (it moved by tenths); the synthetic test — a field
+whose three estimates agree, so pooling must be a no-op — failed immediately. **This is the fifth
+leakage check going into the frozen protocol as a CI test** (FREEZE_PLAN F(b)).
+
+**The re-run reproduces D-030 exactly** (`runs/sickle_m1_lightgbm.csv`, 16 arms × 17 subsets):
+
+| arm | all leads | 7 d | 14 d | 21 d | shared-date | unique-date |
+|---|---|---|---|---|---|---|
+| **calendar-4 + pool** | **6.32 [4.97, 7.99]** | 6.16 | 6.16 | 6.08 | 4.90 | 8.34 |
+| base-5 + pool | 6.49 [5.17, 8.16] | 6.37 | 6.36 | 6.22 | 5.12 | 8.42 |
+| base+s1 + pool | 6.85 [5.62, 8.48] | 6.31 | 6.42 | 6.59 | 6.43 | 7.44 |
+| all + pool | 7.05 [5.75, 8.51] | 6.56 | 6.61 | 6.75 | 6.40 | 7.96 |
+| calendar-4 | 7.29 [5.48, 9.20] | 7.81 | 7.57 | 7.70 | 5.34 | 10.04 |
+| base-5 (point C's best) | 7.41 [5.67, 9.26] | 7.58 | 7.85 | 8.02 | 5.51 | 10.09 |
+| all | 7.76 [6.35, 9.13] | 7.61 | 7.42 | 7.74 | 6.84 | 9.05 |
+| seasonal mean | 11.99 [9.87, 14.29] | 11.99 | 11.99 | 11.99 | 11.10 | 13.24 |
+
+Two things to note when quoting this table. The `all` arm is now **56 features, not 57**
+(`area_acres` left), which is why it reads 7.76 against the published 7.85 — the same model minus
+one measured noise feature. And **pooling is not free early**: it is an identity at `n_acc` 1, a
+small loss at 2 (6.69 vs 6.13 raw for calendar-4) and only pays from 3 on (6.20 / 5.89 / 6.09 at
+3 / 4 / 5+), exactly as D-030 says.
+
+**The stratified result is now in the published run, and it still has the sign C′ found.** Against
+`calendar-4` on the same rows: on **unique-date plots** `base+s1` is **−1.44 d [−2.27, −0.22]** and
+the pooled sensor arms −2.1 to −2.6 d, all significant; on **shared-date plots** every sensor arm
+is **worse** (+1.21 to +1.75 d, all significant). This is the table FREEZE_PLAN F(a) needs — the
+success criterion is only measurable inside a stratum.
+
+**Correction to the 23 Nov figure.** The shared-date share is **58.5% of dev rows / 141 of 241
+samples**, not the 56% / 134 quoted this morning. The definition is now fixed in code (`k=3`
+distinct plots on the same exact date, computed on the dev feature table); the morning's scratch
+script is gone and none of the variants I tried reproduces 134, so the number is restated rather
+than defended. Nothing downstream changes: it is still a majority of rows, clusters still span
+neighbour groups, and the two strata still carry opposite signs.
+
+### D — conformalised quantile regression, and what the intervals actually cost
+
+`models/m1_conformal.py` + `scripts/sickle_m1_conformal.py` → `runs/sickle_m1_conformal.csv`.
+CQR (Romano et al., NeurIPS 2019) on the D-030 point model: LightGBM quantile at 0.05/0.5/0.95,
+split conformal on a calibration fold taken from an **inner, group-disjoint split of each outer
+fold's training rows**, so no row is calibrated on a model that saw it. Three variants on
+identical folds, because the question is which ingredient earns its place:
+
+| variant | coverage (90% target) | mean width |
+|---|---|---|
+| raw + marginal offset | 91.2% [87, 95] | 39.0 d |
+| pooled + marginal offset | 97.2% [94, 100] | 31.6 d |
+| **pooled + offset per `n_acc` stratum** | **92.3% [89, 96]** | **24.8 d** |
+
+**(a) The honest width of a 90% interval here is about 25 days, and that is the number the interim
+report needs next to 6.32 d.** It is not a calibration artefact: the 90th percentile of the pooled
+absolute error is **15.3 d**, the central 90% of signed error spans **[−20.3, +9.9] d**, and an
+oracle constant-width interval would need **30.3 d**. So the adaptive interval is already 18%
+narrower than the oracle fixed one — the width is the task, not the method. A 6.3 d MAE with a
+tail like that means **the decision-grade interval is wider than the sowing window it feeds**,
+which is a result about what M1 can and cannot support, and an argument for M3 consuming the
+distribution rather than the point.
+
+**(b) Marginal calibration on pooled predictions is badly conditioned, as C′ predicted.** It
+over-covers at 97.2% and pays 31.6 d for it, because a row averaging one estimate and a row
+averaging nine are not exchangeable. One conformal offset per accumulation stratum gets coverage
+back to 92.3% and the interval **21% narrower**. The fitted offsets say the same thing: ~0 d at
+`n_acc` 1–2 (the raw quantiles are already about right) and −2.4 to −7.0 d at 3–4 and 5+, i.e.
+conformal spends most of its work *tightening*.
+
+**(c) Pooling the bounds does not tighten with evidence — a design flaw worth naming.** `n_acc` 5+
+intervals are **wider** (27.3 d) than `n_acc` 3–4 (16.9 d), because the running mean keeps the wide
+early-season bounds in the average for ever; averaging bounds gets no √n. The point forecast
+improves with accumulation and the interval does not. Future work, not in this freeze: pool the
+point estimate only and set the width per `n_acc` stratum from its own conformal scores.
+
+**Failures to report rather than tune away.** Conditioning on `n_acc` buys nothing
+lead-conditional or season-conditional: the 7-day bucket covers **86.3% [81, 92]** and may-sep
+**84.6%**, oct-mar **84.4%**. With 33 neighbour groups there is not enough calibration data to
+condition on lead *and* season *and* accumulation, so the frozen protocol reports all three cuts
+and conditions the calibration on one. **And the guarantee is approximate here**: conformal
+assumes exchangeable *rows*, but rows cluster ~9 per field and folds are group-disjoint, so the
+effective calibration size is fields, not rows. The coverage numbers are measured, not certified —
+stated in the module docstring and in `EVALUATION.md`.
+
+Hyperparameters for the quantile fits are **fixed, not tuned** (point C's modal pick): conformal
+coverage does not depend on the fit, and tuning on MAE would be the wrong loss for a quantile
+model. Width is what tuning could buy, and it is named as future work rather than claimed.
+
+### Next
+
+Point F — the freeze itself: `EVALUATION.md` §Replay protocol as v1, the five leakage checks as
+real CI tests, the interval-censored scoring rule written in, and the `protocol-v1` tag.
+
+## 23 Nov 2026 (third session) — CSISA brought into the repo, and it argues with D-031
+
+An external review found the public CSISA rice Landscape Diagnostic Surveys on CIMMYT Dataverse and
+computed Odisha crop-calendar statistics in a browser. This session made that reproducible and
+checked every figure. Code: `ingest/csisa.py`, `scripts/csisa_ingest.py`,
+`features/odisha_calendar.py`, `scripts/csisa_odisha_calendar.py`,
+`scripts/csisa_calendar_stats.py`, `tests/test_csisa.py` (11 tests). Decisions: **D-033** (CSISA
+returns, revisiting D-005) and **D-034** (the pre-freeze disclosure for D-031).
+
+**D-005's premise was backwards.** It dropped CSISA because "the 2018 survey truncates coordinates
+to about 1 km". It is **2017** that is coarse (2 dp); **2018 carries 3 dp ≈ 110 m**, and all **185
+Balasore farmers** fall inside the Baleswar registry bbox. The reason this was missed is visible in
+the file: the 2018 coordinates sit in **two columns with empty headers**. `coord_columns` finds them
+by value range (India's lat and lon ranges do not overlap) and asserts, rather than trusting the
+column index the review quoted.
+
+**The review reproduces almost exactly.** All seven transplanted-only transplanting SDs to the
+decimal (Odisha 2017 11.80, Odisha 2018 11.14, Balasore 12.68, Bihar 2017 11.26, UP 2017 13.25),
+the robust 10.4 d, the 22.9 d all-method Odisha 2017 figure and its 35.7% direct-seeded share, the
+three harvest SDs, Balasore duration SD 7.45, the 118 co-located cells with up to 7 farmers, and
+Bihar 2017's harvest-MAE pair (11.30 → 9.26 against 11.3 → 9.4). Five differ, all explained in
+`reports/csisa_calendar_stats.md` §8: the 2018 row count is **8,355 not 8,393** (8,393 is the line
+count; 38 records contain embedded newlines), Balasore has 36 village names not 30 (30 is the
+≥ 3-farmer subset), MTU 7029 is n = 124 under our variety normalisation and n = 120 / SD 5.67 d on
+the literal string (the review's number exactly), the within-village SD depends on a definition the
+review did not state (pooled 9.04 d reproduces its 9.0; mean-of-village-SDs is 5.73 d), and Odisha
+2017's harvest MAE is 13.49 → 10.42 d on cleaned rows against its 19.8 → 17.1, which is
+reproducible only without the plausibility filter (17.16 → 14.60). **The conclusion survives every
+version: transplanting + per-variety duration beats a median-harvest baseline.**
+
+**The finding the review did not have, and it cuts against D-031.** Balasore's 12.68 d transplanting
+SD is **one field** — village Kasida, transplanted 10 Feb 2018, harvested 13 May, 92 days, which is
+*summer (boro) rice* and not kharif at all. Excluding it by rule (establishment within 0–180 d of
+1 June) takes Balasore to **5.70 d** (robust 4.45, within-village 3.77) and Odisha 2018 as a whole
+from 11.14 to 9.39 d. Across all seven Odisha districts the pooled spread is **10.4 d against
+SICKLE's 10.0 d** — indistinguishable — and **our own study district is roughly half** SICKLE's:
+
+| scope | n | transplanting SD | vs SICKLE |
+|---|---|---|---|
+| Odisha, all districts, both years | 1,049 | 10.4 d | +0.4 |
+| **Baleswar (Balasore 2018)** | 184 | **5.7 d** | **−4.3** |
+| Cuttack / Khordha 2017 | 133 / 112 | 12.2 / 11.5 d | +2.2 / +1.5 |
+| Jagatsinghpur 2018 | 208 | 8.2 d | −1.8 |
+
+**D-031 is kept exactly as written** and D-034 records that this was seen seven days before the
+freeze. The reasons to keep it are in that entry: CSISA measures a farmer's *recalled* transplanting
+date over 36 purposively surveyed villages in 2017/2018, D-031's test is a *radar-observed* flooding
+date over 133,055 registry fields in 2025–26, and 56% of Balasore's spread is between villages so a
+36-village sample can understate a district. Rewriting the prediction now to match CSISA would make
+the P3 measurement unfalsifiable after the fact; keeping it means the P3 number decides it either
+way. **The freeze's point F(d) has to drop its claim that the prediction was written "before any
+Odisha number is drawn."**
+
+**What CSISA supports strongly is the other half of D-031** — that harvest date is set by
+transplanting *and variety*. On every group tested, transplanting + per-variety median duration
+beats the median-harvest baseline, and in Balasore **MTU 7029 covers 124 of 185 fields with a
+duration SD of 5.6 d**. That is what the new `features/odisha_calendar.py` prior encodes, and what
+the zero-shot **"Odisha-calendar" arm** (MODELS.md §M2 design note) will test: one harvest date for
+the whole district, read off a 2018 farmer survey, as the floor a transferred M1 must beat. For
+2025–26 Baleswar it says **12 Dec, 90% interval 30 Nov – 21 Dec (21 d)**. Not scored against the
+hand labels — D-031 requires the registry measurement first.
+
+**Two things that cost the protocol something.** The heaping analysis was meant to pin the recall
+tolerance τ for the Balasore evaluation set; Odisha 2017 and Bihar 2017 heap at 36–43% against ~23%
+by chance, but **Balasore 2018 does not heap at all** (18.4% / 22.2%, at or below chance), so τ is
+frozen as a declared sensitivity sweep {0, 3, 5, 7, 10} d with a τ = 7 headline rather than as a
+measured constant. And the datasets carry **no licence** (OPEN_QUESTIONS #14, contact not yet made),
+so the Balasore set and the calendar prior are both provisional, nothing is redistributed, and only
+group-level statistics go in `reports/`.
+
+### Next
+
+Unchanged: point F, the freeze. It now has two more things to carry — the Balasore secondary set's
+six scoring rules and D-034's disclosure.

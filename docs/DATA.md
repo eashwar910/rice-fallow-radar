@@ -20,7 +20,7 @@ Add to this file whenever a dataset surprises you.
 | AE | AlphaEarth embeddings (Brown et al., 2025) | DeepMind model summarising each 10 m pixel per year as 64 numbers | Landscape context for M4 | Earth Engine |
 | SICKLE | Sani et al. (2024) | ~388 Tamil Nadu plots with field-recorded harvest dates, 2018–2021 | Train/test M1 | Dataset release (check licence) |
 | ODL | Odisha hand labels (this project) | 150–200 fields, harvest week from cloud-free S2 | Test transfer (M2); validate radar harvest detector | Made here |
-| CSISA | Ajay et al. (2021, 2022) | 2017 survey of 6,857 rice farmers in Bihar, UP, Odisha | District context; plot-level only if coordinates allow | CIMMYT Dataverse |
+| CSISA | Ajay et al. (2021, 2022) | 2017 (6,857 farmers) + 2018 (8,355) rice surveys; farmer-reported transplanting and harvest dates | Odisha crop-calendar prior (D-033); secondary evaluation set, Balasore 2018 | CIMMYT Dataverse |
 | AFN | AgriFieldNet (Radiant Earth & IDinsight, 2022) | Ground-surveyed crop types incl. fallow, four Indian states | M4 validation (lower bounds) | Source Coop |
 
 ---
@@ -96,7 +96,7 @@ Add to this file whenever a dataset surprises you.
 - *(19 Nov 2026)* **The harvest signature in S1 is weak, and its sign depends on the season.** Pooled VH is lowest 90–200 days before harvest (−18.7 dB, the transplanting flood), rises through canopy growth, and sits near −17 dB at harvest. Per sample, mean VH in the 30 days before harvest minus the 30 days after is a median of **+0.51 dB and positive in only 60% of samples** — far smaller than the 2–3 dB drop the literature reports for large fields. By season: sep-feb +0.71 dB (66% drop), oct-mar +1.12 (66%), but **may-sep −0.49 dB, dropping in only 42%** — August–September harvests sit inside the monsoon, so the post-harvest field is wet and VH rises. Plot size does not explain it (the drop is no cleaner for 24+ px plots), so this is a genuine property of these fields, not only speckle. **Consequence:** may-sep is the season where the date spread is tightest (easy for a calendar baseline) and the radar signal is weakest (hard for a radar model) — the two must be reported separately.
 - *(19 Nov 2026)* **Where SICKLE is, measured rather than assumed.** The S2 patch filenames carry the MGRS tile; the exact-label samples fall in four — T44PKS, T44PKT, T44PLS, T44PLT — whose footprints span **78.61–80.18 °E, 9.85–11.76 °N**, i.e. the Cauvery basin in Tamil Nadu (delta plus upstream). Six distinct tile sets occur across samples. This is what D-027 attaches regional weather to. It localises a plot no better than 110 km, so it does not touch the authors' withheld coordinates.
 - *(19 Nov 2026)* **Regional weather pulled** to `data/interim/sickle_weather.parquet`: CHIRPS daily rainfall and ERA5-Land daily temperature / evaporation / soil moisture per tile, 2017-10-01 to 2021-06-30, 5,476 rows.
-- *(23 Nov 2026, `scratchpad/diag2.py`–`diag4.py`; see LOG 23 Nov)* **Harvest dates collapse onto shared village dates, and neighbour groups do not contain the collapse.** Within a season-year the exact dates pile up on a few modal days: sep-feb 2021 has 18 of 92 samples on 8 Feb and 14 on 19 Jan; may-sep 2020 has 13 of 26 on 22 Aug; the top-3 dates hold 26–73% of a season-year. **134 of the 241 dev samples (56% of feature rows) share their harvest date with ≥ 2 others**, and a shared-date cluster spans a mean of **3.4 neighbour groups** — so D-022's grouped folds hold out the plot's neighbours but *not* the other plots carrying the same recalled date, and a model can learn "the next sep-feb harvest is 8 Feb" and carry it to a held-out group. This is not temporal or spatial leakage; it is farmer recall rounding to a village-level date, and it removes the per-plot variation M1 exists to predict. It is the mechanism behind point C's pooled null (LOG 22 Nov): on shared-date plots the calendar arm scores 4.94 d and every sensor arm is **significantly worse** (+1.5 to +1.8 d), while on unique-date plots the calendar scores 10.29 d and `base+s1` is **significantly better** (−1.26 d [−1.99, −0.12]). Crossing the split with distance from the season median shows the sign follows the label, not the difficulty: sensors lose on shared dates in both difficulty halves (+1.54, +1.45) and win on unique dates in both (−1.52, −1.06), including on the *easier* unique half. Report the two strata separately wherever a SICKLE M1 number appears; the split conditions on the label, so it is a diagnostic of label quality and never an operational selector.
+- *(23 Nov 2026, `scratchpad/diag2.py`–`diag4.py`; see LOG 23 Nov)* **Harvest dates collapse onto shared village dates, and neighbour groups do not contain the collapse.** Within a season-year the exact dates pile up on a few modal days: sep-feb 2021 has 18 of 92 samples on 8 Feb and 14 on 19 Jan; may-sep 2020 has 13 of 26 on 22 Aug; the top-3 dates hold 26–73% of a season-year. **141 of the 241 dev samples (58.5% of feature rows) share their harvest date with ≥ 2 others** *(restated 23 Nov, second session: the definition is now fixed in code as `features.sickle_m1.shared_harvest_date`, k=3 distinct plots on the same exact date over the dev feature table. The 134 / 56% first published came from a scratch script that no longer exists and could not be reproduced; the conclusion is unchanged.)*, and a shared-date cluster spans a mean of **3.4 neighbour groups** — so D-022's grouped folds hold out the plot's neighbours but *not* the other plots carrying the same recalled date, and a model can learn "the next sep-feb harvest is 8 Feb" and carry it to a held-out group. This is not temporal or spatial leakage; it is farmer recall rounding to a village-level date, and it removes the per-plot variation M1 exists to predict. It is the mechanism behind point C's pooled null (LOG 22 Nov): on shared-date plots the calendar arm scores 4.94 d and every sensor arm is **significantly worse** (+1.5 to +1.8 d), while on unique-date plots the calendar scores 10.29 d and `base+s1` is **significantly better** (−1.26 d [−1.99, −0.12]). Crossing the split with distance from the season median shows the sign follows the label, not the difficulty: sensors lose on shared dates in both difficulty halves (+1.54, +1.45) and win on unique dates in both (−1.52, −1.06), including on the *easier* unique half. Report the two strata separately wherever a SICKLE M1 number appears; the split conditions on the label, so it is a diagnostic of label quality and never an operational selector.
 - *(23 Nov 2026, `scratchpad/diag5.py`)* **`VARIETY` and `TRANSPLANTING_DATE` are present on all 319 exact rows and neither was in M1's feature table.** Variety nearly determines crop duration: median transplanting→harvest by variety stem, with mean absolute deviation inside the variety — IR 50 80 d (**0.0**), Kalser 102 d (2.1), CR 1009 128 d (2.3), Kalsar 98 d (3.4), ADT 37 73 d (4.4), ADT 36 85 d (4.9), CR 139 d (6.3), BPT 111 d (9.6), CO 51 95 d (9.6). Variety strings are dirty (`Kalsar`/`Kalser`, `CR`/`CR 1009`, `ASD`/`ASD 16`/`ASD 17`, `ADT 36`–`51`, `BPT`/`BPT 5204`); grouping on the first token is enough. A rule of `harvest = transplanting + median duration per (season, variety)` scores **6.39 d MAE leave-one-group-out — better than the best 58-feature LightGBM arm (7.41 d)**, and handing LightGBM `days_since_transplanting` + variety takes it to **4.60 d** [−3.09 vs base, −3.93 to −2.48]. Both inputs are legitimately in the past at `as_of` (minimum duration 66 d against a maximum lead of 57), so this is a ceiling, not leakage. **Neither is observable from orbit**, which is why it stays a ceiling — see the next bullet.
 - *(23 Nov 2026, `scratchpad/diag6.py`, `diag8.py`)* **Why that ceiling is unreachable on SICKLE: the delta is scheduled, so there is no timing variation to detect.** Transplanting day-of-season has sd **10.0 d** across all 305 samples; a learned detector on binned S1+S2 curves (fixed season-start→+100 d window, grouped CV) scores **6.03 d and loses to simply predicting the season median (5.94 d)**. A one-line VH-minimum detector scores 15.4 d. Duration is the input that matters (variety alone is worth −1.78 d, `days_since_transplanting` alone **nothing**: 7.22 vs 7.31), and duration predicted from the series reaches MAE 11.86 d against a 19.4 d spread (r = 0.63); the coarse 3-class version classifies at **79.7% per-field against a 63.5% majority baseline**, but a *perfect* coarse class is worth only 0.52 d and at 79.7% the realised end-to-end gain is **0.00 d**. So the information determining harvest date in the Cauvery delta is a planting decision plus genetics, and the satellite can see neither. This is the measured source-domain finding that M2's rainfed-Odisha prediction rests on.
 - *(23 Nov 2026)* **The 588 rough rows carry transplanting dates and imagery but no variety.** All 588 have `TRANSPLANTING_DATE`, and all 588 have S1 patches *and* 10 m masks on disk; **0 of 588 have `VARIETY`**. So they cannot feed a duration/variety classifier (the component that is actually data-starved), but they take SICKLE's transplanting-date labels from 319 to **907** should a crop-age detector be built for Odisha. Their harvest dates remain month-end stubs — the five distinct values are 12-31 (×211), 09-30 (×195), 01-31 (×80), 05-31 (×54), 07-31 (×48) — i.e. month-wide censoring intervals, not noisy dates, in seasons (aug-jan, jun-oct, apr-aug) that barely overlap the exact set's. D-024 stands and should not be expected to buy statistical power.
@@ -112,7 +112,71 @@ Add to this file whenever a dataset surprises you.
 - **The `rice` tick is the weak link.** Of the 153 `ok` rows only 77 are `rice = yes`; 75 are `unsure`. Repeat agreement on `rice` is **55%**, almost all of it churn across the `yes`/`unsure` boundary (`no` vs not-`no` agrees 80%). Stratum U gives rice = 40 yes / 42 unsure / 7 no / 11 blank, so the honest statement of kharif-rice prevalence from this sample is a **range, 40–82% of fields**, not a point. That is too loose to validate the D-021 rice mask on its own — see OPEN_QUESTIONS.
 
 ### CSISA
-- The 2018 companion survey truncates coordinates to about 1 km (Ajay et al., 2022) — probably too coarse to match fields, which is why the hand-labelled set replaced it as the transfer test. The 2017 file may differ; check before discarding. Any use needs ethics approval and licence compliance.
+*(downloaded and verified in this repo on 23 Nov 2026; `scripts/csisa_ingest.py`, `ingest/csisa.py`, `tests/test_csisa.py`. The earlier note here — "the 2018 survey truncates coordinates to about 1 km" — was **wrong about which year is coarse**: it is 2017 that is coarse. See D-033.)*
+
+Two public CIMMYT Dataverse surveys, Landscape Diagnostic Surveys of rice. No login; the Dataverse
+access API serves them (`https://data.cimmyt.org/api/access/datafile/{id}?format=original`).
+
+| | 2017 | 2018 |
+|---|---|---|
+| handle | `hdl:11529/10548605` | `hdl:11529/10548656` |
+| data file id / md5 | 16323 / `f28190bea115d7900a43384a824b2a0c` | 20843 / `d61e6fe94d20e5a8362d1d9943c8fdb8` |
+| docs file ids | Variable_Details 16325 | Variable_Details 18769, codebook 18773 |
+| parsed rows | 6,857 | **8,355** |
+| states | Bihar 4,713, UP 1,589, Odisha 555 | 8 states; Bihar 2,428, WB 1,536, AP 1,333, UP 964, **Odisha 784**, Chhattisgarh 505, Haryana 417, Punjab 388 |
+| Odisha districts | Cuttack 192, Khordha 189, Mayurbhanj 174 | Jagatsinghpur 213, Bhadrak 195, Jajpur 191, **Balasore 185** |
+| coordinates | `O-largestPlotGPS-Latitude/Longitude`, **2 dp ≈ 1 km** | two columns with **empty headers**, **3 dp ≈ 110 m** |
+| in our districts | none | **Balasore = Baleswar**: all 185 points inside the registry bbox |
+
+**The 2018 coordinate columns have no header.** Pandas names them `Unnamed: 214` / `Unnamed: 215`,
+but the position is not a contract across file revisions, so `ingest.csisa.coord_columns` finds
+them by value range (lat 8–36, lon 68–98 — India's ranges do not overlap) and asserts that exactly
+one column fits each. The written decimal count is asserted per year too, because the precision is
+the whole reason D-005 is reopened.
+
+**Columns used:** `A-q102_state`, `A-q103_district`, `A-q104_subDistrict`, `A-q105_village`,
+`D-q409_varType`, `D-q410_varName`, `D-q413_CropEst`, `D-q414_rcNursEstDate`,
+`D-q415_seedingSowingTransDate`, `L-q601_harvestDate`, plus the coordinates. Dates are dd-mm-yyyy.
+
+**Three traps in the raw files.**
+1. **`D-q415` is two different quantities.** It is the *transplanting* date on transplanted fields
+   (`D-q413_CropEst` contains "Puddled" or "Transplant") and the *sowing* date on direct-seeded
+   ones (`DirectBroadcast`, `DirectSown_Beushening`, "sowing behind country plough", …). Pooling
+   them roughly doubles the apparent spread: Odisha 2017 measures **22.9 d** over all methods and
+   **11.8 d** transplanted-only, because **35.7% of Odisha 2017 is direct-seeded**. Odisha 2018 is
+   9.9% direct-seeded and **Balasore 2018 is 0%** (163 ManualPuddled_Random, 21 ManualPuddled_Line,
+   1 MachineTransplanted_Puddled).
+2. **`00-01-00` is a missing-date sentinel** in 2018's `L-q601_harvestDate`: 417 rows, **all
+   Haryana, none in Odisha**. Everything else parses.
+3. **Variety names are free text** — `MTU7029`, `Mansuri_MTU7029`, `MiniMansuri_MTU7029`,
+   `Golden_MTU7029` are one variety; `OtherPooja`/`Pooja`/`OtherPuja` another.
+   `ingest.csisa.normalise_variety` collapses the MTU codes and the Pooja/Swarna spellings and
+   de-prefixes the rest; it is a shortcut, not a full crop-variety ontology.
+
+**Cleaning:** 466 of 15,212 rows are dropped as implausible (no harvest date, harvest on or before
+establishment, or a season ≥ 250 d), leaving **14,746** in `data/processed/csisa_rice.parquet`
+(Odisha 1,324; Balasore keeps all 185).
+
+**Points are "near the plot", not "the plot".** Up to **7 farmers share one 3-dp cell** in
+Balasore: 185 farmers fall on **118 distinct cells** across **36 villages** (75 cells hold one
+farmer, 32 hold two, the rest 3–7). So the unit of evaluation is the 110 m cell, never an FTW
+polygon.
+
+**Recall rounding is visible.** Reported dates heap on round days of the month — see
+`reports/csisa_calendar_stats.md` §7 for the measured share against the share chance would give
+(computed per row from its own month, so not the naive 7/30.4).
+
+**Terms of use — no licence.** Both datasets carry: *"made available without information on how it
+can be used… communicate with the Contact(s) before use"* (contact: Anurag Ajay, CIMMYT). There is
+no licence statement. So: raw files and row-level derivatives stay in `data/` (gitignored), nothing
+is redistributed, and the group-level statistics in `reports/` are the only thing that leaves this
+machine. Same posture as SICKLE — see OPEN_QUESTIONS #10. **Checked 23 Nov 2026; contact not yet
+made.**
+
+**Measured calendar statistics** are in `reports/csisa_calendar_stats.md`, regenerated by
+`scripts/csisa_calendar_stats.py`. The number that matters for D-031: transplanted-field
+transplanting-date SD is **11.8 d (Odisha 2017)**, **11.1 d (Odisha 2018)** and **12.7 d
+(Balasore 2018)**, against SICKLE's 10.0 d.
 
 ### AgriFieldNet
 - Ground-surveyed crop types including fallow; check which states/seasons overlap usefully with the winter-crop question.

@@ -133,10 +133,21 @@ This set is the backbone of M2 and also validates the radar harvest detector tha
    pre-registered prediction for Odisha. (c) **A better point model: 7.41 → 6.32 d** [4.97, 7.99], and
    6.16 / 6.16 / 6.08 d at 7/14/21 days, from temporal pooling across issue dates plus dropping 53
    features — D-030. No feature-selection algorithm beat the clock, including ones allowed to cheat.
-   Next: C″ wires it into the code, which must land before step 3.
-3. Conformalised quantile regression for intervals; check coverage. **From C′:** calibrate on the
-   *pooled* predictions and report conditional coverage by shared/unique harvest date as well as by
-   lead and season — the two strata are a 4.94 d and a 10.29 d error regime.
+2c. **Done 23 Nov (FREEZE_PLAN C″): C′ is now code.** `area_acres` out of the base block, temporal
+   pooling in `models.m1_lightgbm.pool_predictions` with a leakage test that caught a real
+   misalignment bug, and `runs/sickle_m1_lightgbm.csv` regenerated as 16 arms × 17 subsets.
+   Reproduces D-030 exactly (**6.32 d** [4.97, 7.99]; 6.16 / 6.16 / 6.08 at 7/14/21 d) and puts the
+   stratified arm comparison in the published run: on unique-date plots `base+s1` beats the
+   calendar by **−1.44 d** [−2.27, −0.22], on shared-date plots every sensor arm is worse. The
+   shared-date share is restated 56% → **58.5%** (definition now fixed in code).
+3. **Done 23 Nov (FREEZE_PLAN D): conformalised quantile regression.** CQR on the D-030 model with
+   the conformal offset calibrated **per accumulation stratum** (D-032):
+   **92.3% coverage [89, 96] at 24.8 d mean width**, 90% target, against 97.2% / 31.6 d for a
+   single marginal offset. Conditional coverage is reported by lead, season, `n_acc` and
+   shared/unique harvest date; the 7-day bucket (86.3%) and two seasons (~84%) miss nominal and are
+   reported as such. **The width is the task, not the method** — |err| p90 is 15.3 d and an oracle
+   fixed-width interval needs 30.3 d, so M1's interval is wider than the sowing window it feeds.
+   `runs/sickle_m1_conformal.csv`; rules frozen in `EVALUATION.md` §Interval quality.
 4. Temporal CNN; LSTM as a comparison if time allows.
 5. Grouped splits by plot, year and spatial block; bootstrap CIs.
 
@@ -160,6 +171,28 @@ Write `EVALUATION.md` §Replay protocol as a frozen version (git tag `protocol-v
 - Few-shot fine-tuning on a small labelled Odisha subset.
 - Conformal recalibration on Odisha labels; coverage before and after.
 - Attributions (SHAP for trees, integrated gradients for the CNN), deletion test for faithfulness, and the masking ablation (does masking the post-irrigation drying period shrink the 7-day gap?).
+
+**Added 23 Nov 2026 (D-033/D-034), in priority order:**
+
+- **The D-031 measurement comes first.** Transplanting/flooding-date spread across the Odisha field
+  registry from Sentinel-1, before any Odisha harvest model is tuned. CSISA now gives it a
+  disclosed prior to be checked against (**10.4 d pooled Odisha, 5.7 d in Baleswar**, against
+  SICKLE's 10.0 d — D-034), which makes the measurement more interesting, not less: the two sources
+  measure different things and currently disagree with D-031's prediction.
+- **The "Odisha-calendar" zero-shot arm** in the transfer ablation (MODELS.md §M2 design note).
+  Built already (`features/odisha_calendar.py`); needs only to be scored.
+- **A Sentinel-1 per-geometry puller** — `ingest/s1.py`, which does not exist yet; `ee_cost_pilot.py`
+  is the only S1 reducer in the repo and it samples coarse cells, not arbitrary geometries. Needed
+  anyway for the Odisha feature builder, and separately for the CSISA Balasore cells: **110 m boxes
+  around the 118 3-dp cells, 2018 season**. Note there are **no 2018 FTW polygons**, so this is
+  boxes-not-fields by necessity, and the boxes mix neighbouring fields — which is a reason to treat
+  the Balasore set as secondary (EVALUATION.md). Reuse D-017's `computeFeatures` route and D-027's
+  per-tile weather pattern.
+- **Scoring the CSISA Balasore secondary set** (185 farmers, 118 cells, interval-valued, τ sweep),
+  provisional on the licence question (OPEN_QUESTIONS #14).
+- *Stretch, not in scope:* training M1 on CSISA labels. 1,049 Odisha transplanted rows is more
+  labels than SICKLE has, but at ~110 m boxes, the wrong years and no field boundaries, so it is a
+  separate experiment rather than a drop-in label source.
 
 This phase produces the most distinctive research result. If time is short, protect the gap measurement and the ablation; drop model variants first.
 
@@ -205,8 +238,9 @@ Any of these should be noted in `DECISIONS.md` and acknowledged as a limitation.
 | P0 Setup | ✅ Done (13 Nov) | See P0 step tracker |
 | P1 Pipeline | ✅ Field registry done (19 Nov) | `data/processed/fields.parquet`, 292,060 fields; feature builder exists for SICKLE, not yet for Odisha |
 | P1b Odisha labels | ✅ Labelled (20 Nov) | 153 harvest intervals of 200 fields; `data/processed/odisha_labels.parquet`, 60% eval-locked. See DATA.md §Odisha hand labels |
-| P2 M1 | In progress | LightGBM ablation done (FREEZE_PLAN A–C, 22 Nov): 7.41 d best, but calendar-only wins and no sensor arm separates. **C′ (23 Nov) explains why — 56% of harvest dates are shared village dates — and gets 7.41 → 6.32 d from temporal pooling (D-030); C″ wires it in.** Conformal intervals (D) next, then the freeze (F) |
-| Protocol freeze | Not started | |
+| P2 M1 | In progress | FREEZE_PLAN A–D done. Point model **6.32 d** [4.97, 7.99] (four calendar features + temporal pooling, D-030) with **92.3% / 24.8 d** conformal intervals (D-032); the sensor arms earn their place only on the **unique-harvest-date** stratum (−1.44 d), which is why the success criterion is stratified (O1). Left in this window: **F, the freeze** — protocol v1, five leakage checks as CI tests, `protocol-v1` tag |
+| Protocol freeze | Not started | **New input (23 Nov):** F(d) must disclose that CSISA Odisha transplanting spreads were seen before the freeze and point the other way (D-034); the Balasore secondary evaluation set and its scoring rule are now written into `EVALUATION.md` and need to be frozen with the rest |
+| CSISA (D-033) | Ingested | Both surveys downloaded, md5-pinned and tested; `data/processed/csisa_rice.parquet` (14,746 rows), `reports/csisa_calendar_stats.md` reproduces the 23 Nov review, calendar prior built. Blocked only on the licence contact (OPEN_QUESTIONS #14), which nothing waits for |
 | P3 M2 | Not started | |
 | P4 M3/M4 | Not started | |
 | P5 Integration | Not started | |
