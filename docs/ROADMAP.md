@@ -114,9 +114,9 @@ This set is the backbone of M2 and also validates the radar harvest detector tha
 
 **Goal:** a forecaster with held-out SICKLE results at 7/14/21-day horizons, beating the baselines, with calibrated intervals.
 
-0. **Done 22 Nov (FREEZE_PLAN A):** per-plot S2 series (`data/interim/sickle_s2_series.parquet`).
+0. **Done 22 Nov (FREEZE_PLAN A; the plan is archived at `docs/archive/FREEZE_PLAN.md`):** per-plot S2 series (`data/interim/sickle_s2_series.parquet`).
    NDVI's pre-harvest decline is stronger and earlier than S1's VH drop, which is what justifies
-   putting optical into M1's features (decision 1 of `FREEZE_PLAN.md`). See LOG 22 Nov.
+   putting optical into M1's features (decision 1 of `docs/archive/FREEZE_PLAN.md`). See LOG 22 Nov.
 1. Baselines first: average harvest date; phenology rule from the radar curve. These are fast and give the interim report something solid even if the models wobble. **Done 19 Nov:** 12.0 d [9.9, 14.3] and 17.1 d [16.1, 18.2] out of fold on the dev split (`runs/sickle_m1_baselines.csv`). The radar rule loses to the calendar; see LOG 19 Nov for why, and note the proposal's ≤ 7 d target now looks demanding.
 2. LightGBM on hand-built time-series features at each horizon. **Done 22 Nov** as a 7-arm
    feature-set ablation (`runs/sickle_m1_lightgbm.csv`): best arm **7.41 d**, which more than
@@ -157,9 +157,13 @@ This set is the backbone of M2 and also validates the radar harvest detector tha
 
 ## Protocol freeze (30 Nov)
 
-Week-by-week plan for this window, agreed 22 Nov: `FREEZE_PLAN.md`.
-
-Write `EVALUATION.md` §Replay protocol as a frozen version (git tag `protocol-v1`): issue dates, which data each issue may use, metrics, reference labels, baselines. After this, 2026–27 imagery can be ingested but not used to choose models or thresholds.
+**✅ Done 26 Nov — `protocol-v1` tagged (D-035).** The plan for the window (agreed 22 Nov) is
+archived at `docs/archive/FREEZE_PLAN.md`. What was frozen: `EVALUATION.md` sections marked *(v1)*
+— like-for-like O1, interval rules 1–6 (rule 5 measured and redesigned), five leakage checks as CI tests on
+synthetic data, the CSISA secondary set, the M2 protocol (order of operations, season mapping,
+pass direction, D-031's rule) and the replay protocol (13 Tuesdays, 3 Nov 2026 – 26 Jan 2027, the
+source-lag table in `eval.availability`). After this, 2026–27 imagery can be ingested but not used
+to choose models or thresholds.
 
 ## P3 — M2 transfer and diagnosis (mid-Dec → end Jan)
 
@@ -172,6 +176,16 @@ Write `EVALUATION.md` §Replay protocol as a frozen version (git tag `protocol-v
 - Conformal recalibration on Odisha labels; coverage before and after.
 - Attributions (SHAP for trees, integrated gradients for the CNN), deletion test for faithfulness, and the masking ablation (does masking the post-irrigation drying period shrink the 7-day gap?).
 
+**Ready to start (26 Nov 2026).** In order, per `EVALUATION.md` §M2 protocol:
+
+1. `uv run python scripts/odisha_transplant_spread.py` — D-031's measurement, 2 × 2,000 fields,
+   S1 Jun–Sep 2025, resumable. Its verdict decides where the dissertation's weight goes.
+2. Zero-shot arms on the free 40%: `features.odisha_m1.build` gives the rows (499 from 61 fields),
+   `eval.interval_scoring` scores them, `features.odisha_calendar.zero_shot_harvest` is the
+   Odisha-calendar arm. Needs a small script that trains `calendar-4+pool` on all SICKLE dev.
+3. Odisha sensor features: `ingest.s1.series` exists and was smoke-tested; the S2 pull reuses
+   `ingest.s2`; both go through `eval.availability.visible`.
+
 **Added 23 Nov 2026 (D-033/D-034), in priority order:**
 
 - **The D-031 measurement comes first.** Transplanting/flooding-date spread across the Odisha field
@@ -181,7 +195,7 @@ Write `EVALUATION.md` §Replay protocol as a frozen version (git tag `protocol-v
   measure different things and currently disagree with D-031's prediction.
 - **The "Odisha-calendar" zero-shot arm** in the transfer ablation (MODELS.md §M2 design note).
   Built already (`features/odisha_calendar.py`); needs only to be scored.
-- **A Sentinel-1 per-geometry puller** — `ingest/s1.py`, which does not exist yet; `ee_cost_pilot.py`
+- ✅ *(26 Nov: `ingest/s1.py` written and smoke-tested on 3 Baleswar fields)* **A Sentinel-1 per-geometry puller** — `ingest/s1.py`, which did not exist then; `ee_cost_pilot.py`
   is the only S1 reducer in the repo and it samples coarse cells, not arbitrary geometries. Needed
   anyway for the Odisha feature builder, and separately for the CSISA Balasore cells: **110 m boxes
   around the 118 3-dp cells, 2018 season**. Note there are **no 2018 FTW polygons**, so this is
@@ -236,12 +250,12 @@ Any of these should be noted in `DECISIONS.md` and acknowledged as a limitation.
 | Phase | Status | Notes |
 |---|---|---|
 | P0 Setup | ✅ Done (13 Nov) | See P0 step tracker |
-| P1 Pipeline | ✅ Field registry done (19 Nov) | `data/processed/fields.parquet`, 292,060 fields; feature builder exists for SICKLE, not yet for Odisha |
+| P1 Pipeline | ✅ Field registry done (19 Nov) | `data/processed/fields.parquet`, 292,060 fields; SICKLE feature builder done; Odisha has the calendar rows (`features/odisha_m1.py`) and an S1 puller (`ingest/s1.py`), sensor features are P3 |
 | P1b Odisha labels | ✅ Labelled (20 Nov) | 153 harvest intervals of 200 fields; `data/processed/odisha_labels.parquet`, 60% eval-locked. See DATA.md §Odisha hand labels |
-| P2 M1 | In progress | FREEZE_PLAN A–D done. Point model **6.32 d** [4.97, 7.99] (four calendar features + temporal pooling, D-030) with **92.3% / 24.8 d** conformal intervals (D-032); the sensor arms earn their place only on the **unique-harvest-date** stratum (−1.44 d), which is why the success criterion is stratified (O1). Left in this window: **F, the freeze** — protocol v1, five leakage checks as CI tests, `protocol-v1` tag |
-| Protocol freeze | Not started | **New input (23 Nov):** F(d) must disclose that CSISA Odisha transplanting spreads were seen before the freeze and point the other way (D-034); the Balasore secondary evaluation set and its scoring rule are now written into `EVALUATION.md` and need to be frozen with the rest |
+| P2 M1 | In progress | FREEZE_PLAN A–F done. Point model **6.32 d** [4.97, 7.99] (four calendar features + temporal pooling, D-030) with **92.3% / 24.8 d** conformal intervals (D-032). Sensors beat the calendar on unique-harvest-date plots only before pooling (−1.44 d raw; −0.90 d [−1.76, +0.14] pooled, D-035). Left: temporal CNN (step 4) and the SICKLE locked-test unlock (~11 Dec) |
+| Protocol freeze | ✅ Done (26 Nov) | `protocol-v1` tagged; D-035. Five leakage checks run in CI on synthetic data; interval-label scoring measured on SICKLE before freezing and redesigned (midpoint MAE, bias-corrected intersection coverage) |
 | CSISA (D-033) | Ingested | Both surveys downloaded, md5-pinned and tested; `data/processed/csisa_rice.parquet` (14,746 rows), `reports/csisa_calendar_stats.md` reproduces the 23 Nov review, calendar prior built. Blocked only on the licence contact (OPEN_QUESTIONS #14), which nothing waits for |
-| P3 M2 | Not started | |
+| P3 M2 | Ready | Step 1 is `scripts/odisha_transplant_spread.py` (D-031), written to the frozen rule and not yet run |
 | P4 M3/M4 | Not started | |
 | P5 Integration | Not started | |
 | P6 Writing | Not started | |

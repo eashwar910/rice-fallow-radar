@@ -30,3 +30,6 @@ __pycache__/
 # secrets / os
 .env
 .DS_Store
+
+# personal records, kept local
+reports/*.pdf

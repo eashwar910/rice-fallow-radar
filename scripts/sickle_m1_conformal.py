@@ -14,7 +14,7 @@ Nesting: each outer fold's calibration rows come from an inner, group-disjoint s
 fold's *training* rows, so no row is ever calibrated on a model that saw it, and the locked test
 groups are never read. Usage:
     uv run python scripts/sickle_m1_conformal.py
-Writes runs/sickle_m1_conformal.csv.
+Writes runs/sickle_m1_conformal.csv (+ _rows.parquet).
 """
 
 import sys
@@ -88,15 +88,11 @@ def main() -> None:
             "pooled + marginal": (pc, pt),
         }.items():
             off = C.offset(q_cal[:, 0], q_cal[:, 2], cal.lead.to_numpy())
-            dev.loc[te.index, [f"{v} lo", f"{v} mid", f"{v} hi"]] = np.column_stack(
-                [q_te[:, 0] - off, q_te[:, 1], q_te[:, 2] + off]
-            )
+            dev.loc[te.index, [f"{v} lo", f"{v} mid", f"{v} hi"]] = C.widen(q_te, off)
         tbl = C.offsets_by_stratum(pc[:, 0], pc[:, 2], cal.lead.to_numpy(), C.acc_stratum(acc_c))
         off = C.apply_offsets(tbl, C.acc_stratum(acc_t))
         v = "pooled + by n_acc"
-        dev.loc[te.index, [f"{v} lo", f"{v} mid", f"{v} hi"]] = np.column_stack(
-            [pt[:, 0] - off, pt[:, 1], pt[:, 2] + off]
-        )
+        dev.loc[te.index, [f"{v} lo", f"{v} mid", f"{v} hi"]] = C.widen(pt, off)
         print(
             f"  fold {k}: train {len(tr)} / calibrate {len(cal)} / test {len(te)} rows, "
             f"offsets {tbl.round(2).to_dict()}"
@@ -119,6 +115,9 @@ def main() -> None:
 
     RESULTS.parent.mkdir(parents=True, exist_ok=True)
     res.to_csv(RESULTS, index=False)
+    ivl = [f"{v} {k}" for v in VARIANTS for k in ("lo", "mid", "hi")]
+    keep = ["unique_id", "group", "season", "as_of", "harvest", "lead", "shared_date", "n_acc"]
+    dev[keep + ivl].to_parquet(RESULTS.with_name(RESULTS.stem + "_rows.parquet"))
 
     def fmt(r: pd.Series, field: str, unit: str) -> str:
         ci = f" [{r.cov_lo:.0f}, {r.cov_hi:.0f}]" if field == "coverage" else ""

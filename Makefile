@@ -1,4 +1,4 @@
-.PHONY: setup test lint fmt registry sickle labels
+.PHONY: setup test lint fmt registry sickle labels m2-step1
 
 setup:  ## install env + git hooks
 	uv sync
@@ -27,3 +27,6 @@ sickle:  ## SICKLE per-plot S1/S2 series, regional weather, M1 feature table and
 labels:  ## P1b: pull chips/NDVI and build the labelling page (use --pilot first)
 	uv run python scripts/odisha_label_pull.py
 	uv run python scripts/odisha_label_tool.py
+
+m2-step1:  ## P3 step 1 (frozen M2 protocol): D-031 flooding-date spread over the Odisha registry
+	uv run python scripts/odisha_transplant_spread.py

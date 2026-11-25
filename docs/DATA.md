@@ -32,6 +32,7 @@ Add to this file whenever a dataset surprises you.
 - Revisit has varied over the years: Sentinel-1B failed in Dec 2021 (ESA, 2022); 1C and later 1D have since joined *(checked Oct 2026)*. Earth Engine listed 6 days. Expect irregular spacing in the time series — model it rather than hide it.
 - Use a consistent orbit direction / relative orbit per field where possible, or include it as a feature; incidence angle affects backscatter.
 - Speckle: per-field aggregation reduces it; very small polygons will still be noisy — use the valid-pixel count as a quality flag.
+- *(25 Nov 2026, `ingest/s1.py` smoke pull, 3 Baleswar fields, Jul 2025)* **The two domains see S1 from different geometries.** SICKLE's 5,782 scenes are **96% descending** (scene time 00 UTC; 252 at 12 UTC are ascending) at a median incidence of **36°** (31–45°). Baleswar fields get descending relative orbit **48 at ~42.8°** *and* ascending orbit **85 at ~37.5°**, each about every 12 days (S1A only in Jul 2025: 5 scenes a month per field). Backscatter depends on incidence angle and look direction, so mixing passes on the Odisha side would be a shift we introduced ourselves; the frozen M2 protocol uses descending only for the headline (D-035). July VH over these fields sat at −23 to −29 dB, the transplanting-flood signature, so the puller returns physically sensible values. `ingest/s1.py` takes the **mean of dB pixels** per field, as `ingest.sickle.s1_series` does.
 
 ### Sentinel-2
 - Cloud is the main constraint during the monsoon, which is exactly why radar drives M1. In the dry winter, S2 is much more usable.
@@ -52,7 +53,7 @@ Add to this file whenever a dataset surprises you.
 ### ERA5 / ERA5-Land
 - The Earth Engine ERA5 *daily* collection stopped in July 2020; **ERA5-Land daily** is current *(checked Oct 2026)*.
 - ERA5-Land's evaporation components were noted as sign/naming-swapped; `total_evaporation_sum` was the recommended band *(checked Oct 2026)*. Verify signs on a known dry week before using.
-- Reanalysis has a publication lag of days — respect it in `as_of` logic.
+- Reanalysis has a publication lag of days — respect it in `as_of` logic. **Frozen as 8 days** in `eval.availability.LAG_DAYS` (26 Nov 2026; an estimate rounded up, not a measurement — the table lists every source and may only be raised after the freeze).
 
 ### CHIRPS
 - Has a preliminary and a final product with different lags. The final product in Earth Engine ended 31 Aug 2026 when checked *(Oct 2026)* — recheck; it may simply lag. For replay, use only what would have been available on each issue date.

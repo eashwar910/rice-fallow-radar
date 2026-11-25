@@ -98,3 +98,16 @@ def apply_offsets(table: pd.Series, strata) -> np.ndarray:
     """Each row's own stratum offset, falling back to `marginal` if missing or uncertifiable."""
     off = table.reindex(pd.Index(np.asarray(strata, dtype=object)))
     return off.fillna(table["marginal"]).replace(np.inf, table["marginal"]).to_numpy()
+
+
+def widen(q: np.ndarray, off) -> np.ndarray:
+    """`(n, 3)` lo/mid/hi after the conformal offset, with crossed intervals collapsed.
+
+    A negative offset narrows the interval, and where it exceeds the half-width the bounds cross
+    (0.4% of dev rows before 25 Nov, all in the 3-4 accumulation stratum, whose offsets reach
+    -7 d). A crossed interval claims nothing, so it becomes the point at its centre: still scored
+    as covered only on an exact hit, and contributing zero rather than negative width.
+    """
+    lo, hi = q[:, 0] - off, q[:, 2] + off
+    c = (lo + hi) / 2
+    return np.column_stack([np.minimum(lo, c), q[:, 1], np.maximum(hi, c)])

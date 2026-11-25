@@ -27,7 +27,7 @@ every arm as a categorical so no arm is less informed than the seasonal-mean bas
 
 Dev split only; the locked test groups are never read. Usage:
     uv run python scripts/sickle_m1_lightgbm.py
-Writes runs/sickle_m1_lightgbm.csv (+ _tuning.csv, _importance.csv).
+Writes runs/sickle_m1_lightgbm.csv (+ _tuning.csv, _importance.csv, _rows.parquet).
 """
 
 import sys
@@ -119,6 +119,9 @@ def main() -> None:
 
     RESULTS.parent.mkdir(parents=True, exist_ok=True)
     res.to_csv(RESULTS, index=False)
+    # per-row predictions, for checks that rescore them (scripts/interval_rule_check.py)
+    keep = ["unique_id", "group", "season", "as_of", "harvest", "lead", "shared_date", "n_acc"]
+    dev[keep + cols].to_parquet(RESULTS.with_name(RESULTS.stem + "_rows.parquet"))
     pd.DataFrame(tuning).to_csv(RESULTS.with_name(RESULTS.stem + "_tuning.csv"), index=False)
     imp = L.gain_importance(dev, F.block_columns(dev, ARMS["all"]) + ["season_cat"])
     imp.rename("gain").rename_axis("feature").reset_index().assign(
@@ -143,13 +146,17 @@ def main() -> None:
             gap, lo, hi = B.bootstrap_mean(err[a] - err[ref], dev.group)
             verdict = "better" if hi < 0 else "worse" if lo > 0 else "not separated"
             print(f"  {a:<22} {gap:+6.2f} d [{lo:+.2f}, {hi:+.2f}]  {verdict}")
-    print(f"\nthe same, on each half of the label-quality stratum, {REF} as reference:")
+    # like for like: raw arms against raw calendar-4, pooled arms against calendar-4+pool. Until
+    # 25 Nov pooled arms were compared with the *raw* reference here, which credited pooling's
+    # ~1 d to the sensors (the O1 criterion is now frozen as like-for-like, EVALUATION.md)
+    print("\nthe same, on each half of the label-quality stratum, like-for-like reference:")
     for shared, g in dev.groupby("shared_date"):
         print(f"  {'shared' if shared else 'unique'}-date plots (n={len(g)}):")
         for a in arms:
-            if a == REF:
+            ref = REF + "+pool" if a.endswith("+pool") else REF
+            if a == ref:
                 continue
-            e = (g[a] - g.lead).abs() - (g[REF] - g.lead).abs()
+            e = (g[a] - g.lead).abs() - (g[ref] - g.lead).abs()
             gap, lo, hi = B.bootstrap_mean(e, g.group)
             verdict = "better" if hi < 0 else "worse" if lo > 0 else "not separated"
             print(f"    {a:<22} {gap:+6.2f} d [{lo:+.2f}, {hi:+.2f}]  {verdict}")

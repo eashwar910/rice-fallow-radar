@@ -62,6 +62,11 @@ All four components are built in this project; the methods they use are publishe
 
 **The research payoff:** "how much is lost, how much is recovered, and here's evidence for why" is the most publishable piece. Keep it clean even if other parts shrink.
 
+**Frozen protocol (26 Nov 2026, D-035):** the order of operations, the `sep-feb` season mapping for
+zero-shot M1, descending-pass S1 and the interval-label scoring are in `EVALUATION.md` §M2 protocol
+(v1). Code ready: `features/odisha_m1.py` (rows), `eval/interval_scoring.py`, `ingest/s1.py`,
+`scripts/odisha_transplant_spread.py` (step 1).
+
 ### Design note — the "Odisha-calendar" ablation arm (D-033, added 23 Nov 2026)
 
 **The problem this arm exists to expose.** M1's point model is four calendar features and no

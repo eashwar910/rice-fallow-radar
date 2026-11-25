@@ -523,3 +523,65 @@ group-level statistics go in `reports/`.
 
 Unchanged: point F, the freeze. It now has two more things to carry — the Balasore secondary set's
 six scoring rules and D-034's disclosure.
+
+## 25–26 Nov 2026 — Point F: the protocol is frozen (`protocol-v1`), and M2 is ready to start
+
+Everything repo-side for the freeze, plus what M2's first steps need. Code:
+`eval/availability.py` (source-lag table + D-019 cut-off), `eval/interval_scoring.py`,
+`features/odisha_m1.py` (Odisha rows with interval targets), `ingest/s1.py` (per-field S1 puller),
+`m1_conformal.widen`, `scripts/interval_rule_check.py`, `scripts/odisha_transplant_spread.py`,
+`tests/test_leakage.py` + `tests/test_m2_scoring.py` (46 tests, all CI-runnable). Decisions:
+**D-029** (the #13 three-annotator design, recorded), **D-035** (the freeze), D-031 amended.
+
+**The leakage checks were not running in CI.** Every SICKLE-backed leakage test skips on a fresh
+clone because the data is never committed, so CI had been green without testing any of them. The
+five checks now run on synthetic inputs, poisoning inputs after *every* issue date rather than only
+the last week, and were mutation-tested: a 3-day weather leak, a 6-day S1 leak and an unsorted
+pooling each turn the suite red. Weather had no leakage test at all before this.
+
+**Rerunning the published M1 scripts reproduced them byte-for-byte**, and turned up two things.
+
+1. **The stratified O1 comparison was not like-for-like.** The stratum table compared pooled sensor
+   arms with the *raw* calendar arm, so pooling's ~1 d was credited to the sensors. Like-for-like
+   on unique-date plots, `base+s1+pool` vs `calendar-4+pool` is **−0.90 d [−1.76, +0.14], not
+   separated**, while on shared-date plots every pooled sensor arm is still significantly worse.
+   The raw-vs-raw −1.44 d stands. So the defensible SICKLE claim is now "sensors help on
+   unique-date plots before pooling, and pooling closes most of that gap". D-031's Odisha
+   prediction is untouched; its SICKLE half is weaker (amended).
+2. **0.4% of D-032's intervals were crossed** (lo > hi): the `n_acc` 3–4 stratum's conformal
+   offsets reach −7 d. They now collapse to their centre; headline unchanged (92.3% / 24.8 d).
+
+**Rule 5 measured before freezing it — the draft would have decided O1 by itself.** SICKLE's exact
+dates, widened into synthetic intervals from the free Odisha label widths, rescored 200 times:
+
+| calendar-4+pool | exact | intersection (draft) | midpoint | uniform-expected |
+|---|---|---|---|---|
+| MAE | 6.32 d | 4.74 | 6.58 | 6.73 |
+| coverage | 92.3% | 95.3% | 81.8% | 80.8% |
+
+No score is unbiased, but they bracket the truth, and each fails differently: intersection flatters
+MAE by 1.6 d and coverage by 3 points, while midpoint is nearly exact on MAE but reads coverage 10
+points low. Strict containment (label wholly inside the interval) reads 62.8%. Frozen: midpoint
+MAE, intersection coverage minus 3.0 points, both with brackets, and a transfer gap computed against
+SICKLE scored the same way. **Good dissertation material:** a ±2.5 d label moves the measured
+coverage of a 90% interval by ~10 points, so the proposal's "coverage within 5 points" criterion is
+only testable on Odisha with an explicit label-noise correction.
+
+**Two transfer choices pre-registered before any Odisha score.** (a) Zero-shot M1 tells Odisha
+kharif it is SICKLE's `sep-feb` (samba analogue), counting days from 1 Sep; the other four mappings
+are a reported sensitivity. (b) Odisha S1 features use descending passes: SICKLE is 96% descending
+at a median 36° incidence, Baleswar gets descending track 48 at 42.8° *and* ascending track 85 at
+37.5° (smoke pull, 3 fields, July 2025 VH −23 to −29 dB — the transplanting flood).
+
+**D-031's measurement rule was tightened before the tag.** A VH minimum alone can land on dry
+pre-monsoon bare soil, so a flood must also be followed by a ≥ 3 dB rise within 60 days (D-021's
+strict signature). The script implements the frozen rule; it has not been run.
+
+Housekeeping: `FREEZE_PLAN.md` archived to `docs/archive/`; `.DS_Store` untracked; personal PDFs in
+`reports/` ignored. The M1 scripts now also write per-row predictions (`runs/*_rows.parquet`).
+
+### Next
+
+P3 step 1: `uv run python scripts/odisha_transplant_spread.py` (2 × 2,000 fields, resumable). Its
+verdict on D-031 decides where the dissertation's weight goes. Then the zero-shot arms on the free
+40%. SICKLE locked-test unlock around 11 Dec.
