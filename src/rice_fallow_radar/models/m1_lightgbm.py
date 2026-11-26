@@ -34,7 +34,8 @@ GRID = [
 
 def _fit(train: pd.DataFrame, cols: list[str], params: dict, seed: int) -> lgb.LGBMRegressor:
     m = lgb.LGBMRegressor(**FIXED, **params, random_state=seed)
-    return m.fit(train[cols], train[TARGET])
+    # optional `weight` column: M2 up-weights target-domain rows (absent on SICKLE -> unweighted)
+    return m.fit(train[cols], train[TARGET], sample_weight=train.get("weight"))
 
 
 def _tune(train: pd.DataFrame, cols: list[str], seed: int) -> dict:

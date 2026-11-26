@@ -1,0 +1,124 @@
+{
+  "frozen_on": "2026-11-26",
+  "rule": "headline adapted arm = lowest mean per-horizon (7/14/21 d) midpoint MAE on the free 40%",
+  "detector": {
+    "method": "s2",
+    "s2_frac": 0.4,
+    "radar_db": null
+  },
+  "shift_days": {
+    "baleswar": -71.0,
+    "bolangir": -85.0
+  },
+  "w_hand": 3.0,
+  "headline_adapted": "few s1+s2",
+  "best_zero_shot": "zs s1+s2",
+  "arms": {
+    "zero-shot M1": {
+      "feat": "calendar-4",
+      "train": "sickle",
+      "shift": false
+    },
+    "zs base+s1+s2": {
+      "feat": "base+s1+s2",
+      "train": "sickle",
+      "shift": false
+    },
+    "zs s1+s2": {
+      "feat": "s1+s2",
+      "train": "sickle",
+      "shift": false
+    },
+    "zs pheno": {
+      "feat": "pheno",
+      "train": "sickle",
+      "shift": false
+    },
+    "shift calendar-4": {
+      "feat": "calendar-4",
+      "train": "sickle",
+      "shift": true
+    },
+    "shift base+s1+s2": {
+      "feat": "base+s1+s2",
+      "train": "sickle",
+      "shift": true
+    },
+    "pseudo base+s1+s2": {
+      "feat": "base+s1+s2",
+      "train": "sickle+pseudo",
+      "shift": false
+    },
+    "pseudo s1+s2": {
+      "feat": "s1+s2",
+      "train": "sickle+pseudo",
+      "shift": false
+    },
+    "pseudo pheno": {
+      "feat": "pheno",
+      "train": "sickle+pseudo",
+      "shift": false
+    },
+    "few base+s1+s2": {
+      "feat": "base+s1+s2",
+      "train": "sickle+few",
+      "shift": false
+    },
+    "few s1+s2": {
+      "feat": "s1+s2",
+      "train": "sickle+few",
+      "shift": false
+    },
+    "pseudo+few base+s1+s2": {
+      "feat": "base+s1+s2",
+      "train": "sickle+pseudo+few",
+      "shift": false
+    },
+    "pseudo+few s1+s2": {
+      "feat": "s1+s2",
+      "train": "sickle+pseudo+few",
+      "shift": false
+    },
+    "pseudo+few pheno": {
+      "feat": "pheno",
+      "train": "sickle+pseudo+few",
+      "shift": false
+    },
+    "in-region base+s1+s2": {
+      "feat": "base+s1+s2",
+      "train": "few",
+      "shift": false
+    },
+    "in-region s1+s2": {
+      "feat": "s1+s2",
+      "train": "few",
+      "shift": false
+    },
+    "pseudo-only base+s1+s2": {
+      "feat": "base+s1+s2",
+      "train": "pseudo",
+      "shift": false
+    }
+  },
+  "per_horizon_mean_mae_free40": {
+    "few s1+s2": 5.72,
+    "few base+s1+s2": 5.9,
+    "in-region base+s1+s2": 6.03,
+    "in-region s1+s2": 6.12,
+    "pseudo+few base+s1+s2": 6.29,
+    "pseudo+few pheno": 6.43,
+    "pseudo+few s1+s2": 6.44,
+    "pseudo s1+s2": 6.54,
+    "pseudo pheno": 6.57,
+    "pseudo-only base+s1+s2": 6.73,
+    "pseudo base+s1+s2": 6.76,
+    "vh_peak_rule": 8.3,
+    "zs s1+s2": 8.92,
+    "shift base+s1+s2": 10.04,
+    "shift calendar-4": 11.26,
+    "zs pheno": 11.83,
+    "Odisha-calendar": 14.39,
+    "zs base+s1+s2": 16.1,
+    "zero-shot M1": 17.96
+  }
+}
