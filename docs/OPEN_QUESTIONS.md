@@ -26,6 +26,7 @@ Things that aren't settled. Some need an answer soon; some are just worth thinki
 
 ## Method questions (worth experimenting on)
 
+- **The all-leads MAE is flattered by row selection under shift (found 26 Nov 2026).** Rows exist only while the midpoint lead is ≤ 60 d (`MAX_LEAD`), a window defined by the true date. A model trained on leads ≤ 57 cannot predict beyond them, so at long leads the cap pins it near the truth whatever it knows. On SICKLE this is harmless (per-horizon 6.2/6.2/6.1 d vs 6.32 all-leads); on Odisha zero-shot it halves the headline (10.2 d all-leads vs 21.2/18.0/14.7 d at 7/14/21 d; the model forecasts harvest ~21 d late at the last issue). The frozen protocol already reports both; proposal: lead the M2 write-up with the per-horizon numbers (the proposal's 7/14/21 d), and say why. Worth a dated note in DECISIONS if adopted.
 - **Regularising the radar series:** resample to a fixed grid (interpolation), keep irregular with time-since-last-pass, or use a model that handles irregular sampling natively? A small ablation would make a good dissertation paragraph.
 - **Calendar time vs. phenological time:** expressing the series relative to an anchor (e.g., VH peak) instead of day-of-year might reduce the cross-region shift by itself.
 - **One multi-horizon model or one per horizon?**

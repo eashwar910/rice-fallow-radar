@@ -585,3 +585,50 @@ Housekeeping: `FREEZE_PLAN.md` archived to `docs/archive/`; `.DS_Store` untracke
 P3 step 1: `uv run python scripts/odisha_transplant_spread.py` (2 × 2,000 fields, resumable). Its
 verdict on D-031 decides where the dissertation's weight goes. Then the zero-shot arms on the free
 40%. SICKLE locked-test unlock around 11 Dec.
+
+## 26 Nov 2026 — P3 steps 1–2: D-031 holds, and zero-shot M1 transfers its clock, not its skill
+
+**Step 1 (D-031's measurement), frozen rule, 2 × 2,000 fields.** Pooled robust SD of flooding
+season-day **20.8 d** (SD 24.2, n = 2,739 detected of 4,000) against the 15 d falsification line
+and SICKLE's 10.0 d: **the prediction holds**. Baleswar 17.8 d (SD 19.0, 87% detected), Bolangir
+35.6 d (SD 26.2, 50% detected). All sensitivities ≥ 17.8 d. Disclosed with it (D-031 amendment):
+robust SD is quantised in 17.8 d steps by the 12-day single-track revisit; and 31% of Bolangir's
+detections are on the first acquisition (pre-monsoon dry soil getting through the 3 dB rule).
+Without them the pooled SD is 19.3 d, so the verdict does not rest on the artefact. One transient
+OAuth connection failure at chunk 9; the resumable cache made it a rerun, not a restart.
+
+**Step 2 (zero-shot arms, free 40%: 61 fields, 58 blocks, 499 rows),** `scripts/odisha_m2_zero_shot.py`.
+Midpoint MAE [block-bootstrap CI], coverage = intersection − 3.0 points:
+
+| arm | all leads | 7 d | 14 d | 21 d | coverage | width |
+|---|---|---|---|---|---|---|
+| zero-shot M1 (`calendar-4+pool`, D-032 interval) | 10.2 [9.8, 10.6] | 21.2 | 18.0 | 14.7 | 78.6% [76, 81] | 16.4 d |
+| Odisha-calendar (CSISA, D-033) | 14.4 [12.1, 16.8] | 14.4 | 14.4 | 14.4 | 64.1% [52, 76] | 30.6 d |
+| seasonal mean (SICKLE sep-feb) | 64.3 | 64.2 | 64.2 | 64.2 | – | – |
+
+**What it means.** Three findings, each a dissertation paragraph:
+
+1. **Tamil Nadu's calendar is two months off.** SICKLE samba harvests in Jan–Feb, Odisha kharif
+   in Nov–Dec; the seasonal mean misses by 64 d. Not a bug: that is the size of the calendar shift
+   the transfer has to absorb.
+2. **The all-leads MAE flatters the transferred model.** M1's prediction correlates 0.98 with the
+   true lead, but because both run off the issue date: it forecasts one date ~21 d late for every
+   field (median implied-date error at the last issue +21 d). At long leads the ≤ 57 d training cap
+   pins it near the truth; at the proposal's horizons it loses to one CSISA date per district
+   (7 d: 21.2 vs 14.4; 14 d: 18.0 vs 14.4; 21 d: tie). A constant 32 d lead scores 14.3 d. On SICKLE
+   the same cap is harmless (6.2/6.2/6.1 d per horizon). OPEN_QUESTIONS has the proposal to lead
+   M2 with per-horizon numbers.
+3. **Coverage breaks under shift, as predicted:** 78.6% against 90%, collapsing to 13% at 7 d — the
+   interval keeps its SICKLE width and its centre is three weeks late. The O1 coverage criterion
+   (within 5 points) fails zero-shot; the recalibration step is now load-bearing, not optional.
+
+The Odisha-calendar arm is weak too (Baleswar coverage 55%; the 2018 survey calendar does not fit
+2025–26, and Bolangir has no CSISA data, so it uses the all-Odisha prior). The clock sensitivity
+(never selected): jun-oct 30.6 d, oct-mar 13.7 d, dec-may 36.3 d (47 rows), may-sep no rows.
+
+### Next
+
+Step 3: Odisha sensor features (S1 descending via `ingest.s1`, S2 via `ingest.s2`, through
+`eval.availability.visible`). With D-031 holding and the calendar shift this large, the sensor arm
+and a phenology-anchored clock (OPEN_QUESTIONS: calendar vs phenological time) are where the
+transfer gap can actually close.
