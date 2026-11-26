@@ -690,3 +690,69 @@ Bolangir has one track.
   step 1 code already computes) and dropping `days_since_season_start` while keeping `doy`.
 - Then XAI on why `base+s1` ignores S1 (SHAP on SICKLE vs Odisha rows) — the diagnostic
   explanation the proposal promises.
+
+## 26 Nov 2026 (evening): M2 finished. Adaptation, diagnosis, and the one unlock of the locked 60%
+
+New: `models/m2_adapt.py` (detectors, pseudo-label frames, phenological clock, clock shift; 5 tests,
+the leakage one mutation-checked), `scripts/odisha_pseudo_pull.py`, `odisha_m2_adapt.py`,
+`odisha_m2_xai.py`, `csisa_balasore_pull.py`, `odisha_m2_final.py`. Decisions in D-036. Arm list
+frozen at `m2-arms-frozen` before the unlock. 52 tests.
+
+**Harvest detectors (free 40%).** Radar fails: 25–37 d midpoint MAE whatever the dB threshold.
+Odisha VH hardly drops at harvest. S2 crossing rule: **8.0 d** [6.0, 10.2], 98% dated. Pseudo-labels:
+579 of 600 unlabelled flooded fields, 4,742 rows.
+
+**Locked 60%, scored once (92 fields, 81 blocks, 757 rows).** Midpoint MAE (d) at 7 / 14 / 21 d,
+all leads, coverage after Odisha recalibration (target 90):
+
+| arm | trains on | 7 d | 14 d | 21 d | all | coverage (width) |
+|---|---|---|---|---|---|---|
+| zero-shot M1 (calendar-4) | SICKLE | 20.6 | 17.6 | 14.2 | 10.0 | 81.5 before → 96.3 after (23.8 d) |
+| zs s1+s2 (no clock) | SICKLE | 7.7 | 9.4 | 11.5 | 16.3 | 96.2 (28.4 d) |
+| shift base+s1+s2 | SICKLE, clock shifted | 9.3 | 10.3 | 11.4 | 13.1 | 92.0 (29.6 d) |
+| pseudo base+s1+s2 | SICKLE + 579 pseudo | 7.1 | 7.8 | 8.3 | 9.2 | 86.6 (27.0 d) |
+| **few s1+s2** (frozen headline) | SICKLE + free hand ×3 | **4.9** | **5.8** | **6.9** | 9.3 | **90.3** [87, 93] (31.6 d) |
+| few base+s1+s2 | SICKLE + free hand ×3 | 5.5 | 6.0 | 6.3 | **6.6** | 91.5 (23.6 d) |
+| in-region base+s1+s2 | free hand only | 5.4 | 5.9 | 6.3 | 6.8 | 91.3 (25.4 d) |
+| Odisha-calendar (CSISA) | one date per district | 13.0 | 13.0 | 13.0 | 12.9 | 71.2 (30.5 d) |
+| VH-peak rule | SICKLE lag | 6.2 | 7.6 | 9.6 | 14.3 | – |
+
+Paired, headline − zero-shot M1 at 7 d: **−15.7 d [−17.0, −14.2]**. Against the Odisha-calendar arm: −8.1 [−10.3, −5.9].
+Transfer gap of the headline vs SICKLE, same features: −2.1 / −1.6 / −1.1 d. **The whole gap is recovered**
+(the share is 1.15 at 7 d). Development numbers replicated within ~1 d everywhere.
+
+**What it means.**
+1. **O1's coverage criterion is met only after recalibration.** Zero-shot M1's SICKLE-calibrated
+   interval covers 81.5% (23% at 7 d). After the Odisha recalibration, the adapted arms sit at 90.3–91.5%.
+2. **Hand labels do the work.** few ≈ in-region (the SICKLE rows add ≤ 0.1 d once 61 Odisha
+   fields are in), and pseudo-labels *hurt* on top of hand labels (pseudo+few base+s1+s2 8.2 vs 6.6 all leads).
+   Without any Odisha hand label, pseudo-labels recover 95% of the 7-day gap (7.1 vs 20.6).
+3. **Calendar shift helps the clock arm at short leads (9.3–10.0 at 7 d) but ruins long leads.** A
+   single offset cannot fix a district whose planting is spread by the monsoon (D-031).
+4. **The phenological clock does not transfer better** (zs pheno 10.0 at 7 d vs zs s1+s2 7.7). The
+   SICKLE side of the feature is weak (flood within 15 d of transplanting on only 52% of samples).
+5. **Bolangir stays harder**: 11.4 d all-leads for the headline, 6.6 for few base+s1+s2. The clock
+   helps there once it is learned from Odisha rows.
+
+**Diagnosis (free 40%, `odisha_m2_xai.py`).**
+- TreeSHAP on zero-shot `base+s1+s2`: the base block's share of |SHAP| rises from 58% (SICKLE) to
+  73% (Odisha). The clock is the top-1 feature on **491/499** Odisha rows. Its signed contribution at
+  7 d is −12.1 d on SICKLE and **+17.0 d** on Odisha: the three-week bias, located.
+- Deletion test (region perturbation): AOPC 19.7 vs 4.5 random on Odisha, 15.1 vs 3.3 on SICKLE,
+  so the attributions are faithful to the model. Deleting each row's top-1 feature on Odisha
+  cuts the 7-day error 19.6 → 8.9 d (−10.7 [−12.2, −9.1]). It raises the 21-day error by 5.7 d.
+- Masking ablation, 15-day latency on every scene: SICKLE 7-day MAE 6.14 → 6.32. The base+s1+s2 gap
+  shrinks by ~1.7 d at *every* horizon (12.2→10.5, 8.6→6.9, 4.9→3.1). **The proposal's
+  post-irrigation drying hypothesis is not supported**: Tamil Nadu models do not lean on the
+  last-15-day signal, and the 7-day gap is the clock. The first version (holes before the true
+  harvest) leaked through `days_since_scene` and was discarded before any result was used.
+
+**CSISA Balasore 2018 (secondary, 118 cells, 35 villages, τ = 7).** few base+s1+s2 4.6 / 5.5 / 6.5
+at 7/14/21 d; zero-shot M1 20.6 / 18.2 / 15.3. The Odisha-calendar arm scores 4.4 d, but it is
+in-sample there (built from this survey). Coverage is saturated for ±7 d labels, so this set is uninformative on coverage.
+
+### Next
+
+M2 is done apart from the write-up. Integrated gradients is not applicable: there is no CNN
+(step 4 of P2 was never built). Open items are in OPEN_QUESTIONS (pseudo-label circularity,
+headline-rule choice). SICKLE locked unlock is still ~11 Dec (M1, not M2).

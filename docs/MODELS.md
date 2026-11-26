@@ -67,6 +67,15 @@ zero-shot M1, descending-pass S1 and the interval-label scoring are in `EVALUATI
 (v1). Code ready: `features/odisha_m1.py` (rows), `eval/interval_scoring.py`, `ingest/s1.py`,
 `scripts/odisha_transplant_spread.py` (step 1).
 
+**Result (26 Nov 2026, D-036, locked 60% scored once):** zero-shot M1 20.6 / 17.6 / 14.2 d at
+7/14/21 d. The frozen headline `few s1+s2` (SICKLE + free hand labels, no clock) scores 4.9 / 5.8 / 6.9 d
+with 90.3% coverage after Odisha recalibration (81.5% before). Optical pseudo-labels alone give
+7.1 / 7.8 / 8.3 d. The radar harvest detector failed (25–37 d), so pseudo-labels are S2-based. The
+Odisha-calendar arm scores 13.0 d. Reading: *Odisha-calendar ≫ zero-shot M1 at 7–14 d, and adapted M1
+beats both*. TreeSHAP and a deletion test put the gap in `days_since_season_start` (+17 d at 7 d on
+Odisha). The drying-period masking hypothesis is not supported. Integrated gradients was not run,
+because there is no CNN. Full tables: LOG 26 Nov (evening).
+
 ### Design note — the "Odisha-calendar" ablation arm (D-033, added 23 Nov 2026)
 
 **The problem this arm exists to expose.** M1's point model is four calendar features and no

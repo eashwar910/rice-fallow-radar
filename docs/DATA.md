@@ -216,3 +216,13 @@ Searched for open rice labels in Odisha and for rice-mapping methods that could 
 
 ## Weather forecasts (open)
 For a truly live system, M3 would need forecast rainfall/temperature. GFS 0.25° is in Earth Engine but has no evaporation band (compute reference ET from its variables). For the replay, a decision is needed: use forecasts as they were issued (honest, harder) or observed weather (optimistic upper bound). See `OPEN_QUESTIONS.md`.
+
+### Harvest in Sentinel-1 vs Sentinel-2, Odisha (26 Nov 2026)
+- Odisha kharif VH (descending, 12-day revisit) barely drops at harvest. Every VH-below-peak rule
+  misses the hand-label midpoint by 25–37 d. S2 NDVI crossing from peak to floor misses by 8.0 d.
+  S2 duplicates dates where two MGRS tiles overlap; residual cloud makes single-scene mid-season
+  dips (take the max per date and require two low scenes in a row).
+- S2_SR_HARMONIZED + Cloud Score+ cover Balasore for the 2018 kharif season (sparse Jul–Sep,
+  dense from October), so the CSISA 2018 cells have optical features.
+- SICKLE's S1 patches start ~4 Oct for samba samples. The flood rule finds a flood on 177/255 dev
+  samples, and within 15 d of the reported transplanting on only 52%.

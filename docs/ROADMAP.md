@@ -183,6 +183,7 @@ to choose models or thresholds.
 2. ✅ *(26 Nov: `scripts/odisha_m2_zero_shot.py`)* Zero-shot arms on the free 40%: `features.odisha_m1.build` gives the rows (499 from 61 fields),
    `eval.interval_scoring` scores them, `features.odisha_calendar.zero_shot_harvest` is the
    Odisha-calendar arm. Needs a small script that trains `calendar-4+pool` on all SICKLE dev.
+4. ✅ *(26 Nov: `odisha_m2_adapt.py`, `odisha_m2_xai.py`, `odisha_m2_final.py`)* Adaptation, diagnosis, one unlock (D-036).
 3. ✅ *(26 Nov: `scripts/odisha_m2_sensors.py`)* Odisha sensor features: `ingest.s1.series` exists and was smoke-tested; the S2 pull reuses
    `ingest.s2`; both go through `eval.availability.visible`.
 
@@ -255,7 +256,7 @@ Any of these should be noted in `DECISIONS.md` and acknowledged as a limitation.
 | P2 M1 | In progress | FREEZE_PLAN A–F done. Point model **6.32 d** [4.97, 7.99] (four calendar features + temporal pooling, D-030) with **92.3% / 24.8 d** conformal intervals (D-032). Sensors beat the calendar on unique-harvest-date plots only before pooling (−1.44 d raw; −0.90 d [−1.76, +0.14] pooled, D-035). Left: temporal CNN (step 4) and the SICKLE locked-test unlock (~11 Dec) |
 | Protocol freeze | ✅ Done (26 Nov) | `protocol-v1` tagged; D-035. Five leakage checks run in CI on synthetic data; interval-label scoring measured on SICKLE before freezing and redesigned (midpoint MAE, bias-corrected intersection coverage) |
 | CSISA (D-033) | Ingested | Both surveys downloaded, md5-pinned and tested; `data/processed/csisa_rice.parquet` (14,746 rows), `reports/csisa_calendar_stats.md` reproduces the 23 Nov review, calendar prior built. Blocked only on the licence contact (OPEN_QUESTIONS #14), which nothing waits for |
-| P3 M2 | In progress (26 Nov) | Step 1 done: D-031 **holds** (pooled robust SD 20.8 d vs 15 d line). Step 2 done: zero-shot M1 midpoint MAE 10.2 d overall but **21.2 / 18.0 / 14.7 d at 7/14/21 d**, losing to the Odisha-calendar arm (14.4 d) at 7 and 14 d; coverage 78.6% (target 90). Step 3 (zero-shot sensor arms) done: every clock-using arm is ~21 d late; **no-clock arms reach 7.0–7.3 d at 7 d** (VH-peak rule, s1+s2), near SICKLE's 6.2–6.6 d — exploratory, confirmed only at the locked unlock. Next: intervals for no-clock arms, phenology-anchored clock, SHAP |
+| P3 M2 | ✅ Done (26 Nov) | Steps 1–4 done; locked 60% unlocked once (D-036). Zero-shot M1 20.6/17.6/14.2 d at 7/14/21 d, coverage 81.5%. Frozen headline `few s1+s2` **4.9/5.8/6.9 d**, coverage **90.3%** after Odisha recalibration (O1 met); pseudo-labels alone 7.1/7.8/8.3 d. SHAP + deletion test locate the gap in the clock; drying-period hypothesis not supported. CSISA Balasore scored (secondary). Left: write-up only |
 | P4 M3/M4 | Not started | |
 | P5 Integration | Not started | |
 | P6 Writing | Not started | |

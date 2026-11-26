@@ -30,7 +30,7 @@ Things that aren't settled. Some need an answer soon; some are just worth thinki
 - **Regularising the radar series:** resample to a fixed grid (interpolation), keep irregular with time-since-last-pass, or use a model that handles irregular sampling natively? A small ablation would make a good dissertation paragraph.
 - **Calendar time vs. phenological time:** expressing the series relative to an anchor (e.g., VH peak) instead of day-of-year might reduce the cross-region shift by itself.
 - **One multi-horizon model or one per horizon?**
-- **Harvest detector for pseudo-labels:** how accurate does it need to be before pseudo-labelling helps rather than hurts? A curve of M2 gain vs. detector error (simulated by corrupting labels) would answer this.
+- **Harvest detector for pseudo-labels** *(partly answered 26 Nov, D-036: the radar detector fails at 25–37 d, the S2 one reaches 8.0 d, and its pseudo-labels recover 95% of the 7-day gap without hand labels but hurt once hand labels exist)*: how accurate does it need to be before pseudo-labelling helps rather than hurts? A curve of M2 gain vs. detector error (simulated by corrupting labels) would answer this.
 - **M3 weather in the replay:** use forecasts as issued (realistic) or observed weather (upper bound)? Possibly report both.
 - **M3 establishment threshold:** which moisture value closes the window for lentil vs. black gram, and from which source?
 - **M4 positives selection bias:** can we measure it (positives vs. unlabelled on distance to road/irrigation/market) and does a propensity-aware method help?
@@ -56,3 +56,6 @@ Things that aren't settled. Some need an answer soon; some are just worth thinki
 - Test transfer to a third region (e.g., Bangladesh, which has similar rice fallows) as a portability check.
 - A simple field-check form design for extension officers (stretch; no data collection, just the design).
 - Compare against the IRRI–Odisha block-level suitability classes if obtainable — the most realistic "current practice" baseline.
+
+- **Pseudo-label circularity (26 Nov 2026).** Pseudo-labels and hand labels are both S2 green→brown reads, so pseudo-label arms are partly scored by the method that made them, and the detector fraction (0.4) was chosen on the same free 40%. A cleaner test: score the pseudo-label arms on CSISA (farmer-reported, independent of S2). On CSISA, pseudo base+s1+s2 is 5.2 / 7.0 / 8.8 d at 7/14/21 d against few base+s1+s2's 4.6 / 5.5 / 6.5, so the ranking survives an independent reference.
+- **Headline-rule choice (26 Nov 2026).** The pre-stated per-horizon rule picked `few s1+s2`; `few base+s1+s2` is better on all leads (6.6 vs 9.3 d) and in Bolangir (6.6 vs 11.4 d), with narrower intervals (23.6 vs 31.6 d). Both were scored at the unlock. The dissertation should report the rule's choice as headline and explain why the clock helps once it is learned from Odisha rows.
