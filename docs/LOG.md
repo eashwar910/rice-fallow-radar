@@ -632,3 +632,61 @@ Step 3: Odisha sensor features (S1 descending via `ingest.s1`, S2 via `ingest.s2
 `eval.availability.visible`). With D-031 holding and the calendar shift this large, the sensor arm
 and a phenology-anchored clock (OPEN_QUESTIONS: calendar vs phenological time) are where the
 transfer gap can actually close.
+
+## 26 Nov 2026 (later) — P3 step 3: take the clock away and the transfer gap at 7 d nearly closes
+
+`ingest.s2.series` (new; Cloud Score+ pixel mask, SICKLE's 50%-clear scene rule),
+`features.odisha_m1.add_sensors` (SICKLE's own `_s1_row`/`_s2_row` on Odisha series, every scene
+through `eval.availability.visible`; rows never dropped so every arm scores the same rows),
+`scripts/odisha_sensor_pull.py` (S1 + S2 for all 153 `ok` fields, locked ones pulled but never
+built), `scripts/odisha_m2_sensors.py`. New leakage test: poisoning every not-yet-available scene
+leaves each row's features unchanged; mutation-tested (dropping the S1 lag turns it red). 47 tests.
+
+**Zero-shot, free 40% (499 rows), descending passes, all arms trained on SICKLE dev and pooled.**
+Midpoint MAE (d); SICKLE's exact-date MAE for the same arm in brackets where it exists:
+
+| arm | uses the clock | 7 d | 14 d | 21 d | all leads | implied-date bias, last issue |
+|---|---|---|---|---|---|---|
+| calendar-4 (step 2's zero-shot M1) | yes | 21.2 (6.2) | 18.0 (6.2) | 14.7 (6.1) | 10.2 | +21.7 d |
+| base+s1 | yes | 21.5 (6.3) | 18.3 (6.4) | 15.0 (6.6) | 10.5 | +22.1 d |
+| base+s1+s2 | yes | 19.6 | 16.1 | 12.6 | 9.1 | +19.8 d |
+| s1 only | no | 10.3 (6.7) | 12.7 (7.0) | 15.3 (7.4) | 20.3 | −8.6 d |
+| s1+s2 | no | **7.3** | **8.7** | **10.7** | 15.6 | −4.2 d |
+| VH-peak rule | no | **7.0** (19.4) | **8.1** (14.6) | **9.8** (13.4) | 14.4 | −3.4 d |
+| Odisha-calendar (step 2) | district date | 14.4 | 14.4 | 14.4 | 14.4 | |
+
+**What it means.**
+
+1. **The transfer gap was the clock.** Every arm that sees `days_since_season_start` forecasts
+   ~3 weeks late, sensors or not: trained on SICKLE, where the clock predicts harvest almost
+   perfectly (D-030), the trees learned to ignore the radar when the clock is present, and so
+   adding S1 changes nothing (+0.3 d). Remove the clock and the bias falls to −3 to −4 d. At 7 d
+   the gap to SICKLE goes from **+15 d (calendar-4) to ≈ +1 d (s1+s2: 7.3 vs SICKLE sensors-only
+   6.6)**. This is the "Odisha-calendar ≫ zero-shot M1" reading of the MODELS.md design note made
+   concrete, with a sharper mechanism: not "the calendar is wrong" but "the model trusts the
+   calendar over its own sensors".
+2. **D-031 again, from the model side.** The VH-peak rule, worst-in-class on SICKLE (19.4 d at
+   7 d), is best-in-class in Odisha (7.0 d) and beats the target-region CSISA calendar by 7 d at
+   every horizon. Where planting is scheduled, the calendar wins; where it is spread by the
+   monsoon, the canopy curve does. Good dissertation figure: per-horizon MAE, SICKLE vs Odisha,
+   clock arms vs no-clock arms.
+3. **No-clock arms are bad at long leads, and in Bolangir** (all-leads 14–20 d; Bolangir s1-only
+   26 d). Far from harvest a radar curve has not peaked yet, so it says little; the clock arms win
+   there only because of the lead cap (OPEN_QUESTIONS, 26 Nov). Bolangir has a single S1 track
+   (DATA.md) and the most direct seeding.
+
+**Honest status.** The no-clock arms and the VH-peak rule were *not* pre-registered as the M2
+headline; they are development on the free 40%, which the protocol allows (step 3), and they
+were chosen after these numbers were seen. They become claims only at the single unlock of the
+locked 60%. VH-peak is pooled here and unpooled in SICKLE's table, so its SICKLE bracket is
+indicative. All-passes is within ~1 d everywhere except s1-only (better), as expected given
+Bolangir has one track.
+
+### Next
+
+- Intervals for the no-clock arms (CQR, then Odisha recalibration on an inner block split, step 3).
+- An adapted model that uses the clock *and* the sensors without trusting the clock blindly:
+  the cheapest candidates are a phenology-anchored clock (days since detected flood, which the
+  step 1 code already computes) and dropping `days_since_season_start` while keeping `doy`.
+- Then XAI on why `base+s1` ignores S1 (SHAP on SICKLE vs Odisha rows) — the diagnostic
+  explanation the proposal promises.

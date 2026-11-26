@@ -20,8 +20,10 @@ plus an **interval-valued target**. Choices frozen in `EVALUATION.md` §M2 proto
 * **Eval-locked rows are excluded unless asked for by name** (`include_locked=True`), which only
   the final-evaluation script may do (D-018).
 
-Sensor columns are not built here yet: they need the Odisha S1/S2 pulls (`ingest.s1`, P3) and
-must go through `eval.availability.visible`, unlike SICKLE's hindcast table.
+Sensor columns are added by `add_sensors`, from the Odisha S1/S2 pulls
+(`scripts/odisha_sensor_pull.py`), through `eval.availability.visible`, unlike SICKLE's hindcast
+table. The per-row feature code is SICKLE's own (`_s1_row`, `_s2_row`), so the two domains share
+feature definitions exactly; only the inputs differ.
 """
 
 from __future__ import annotations
@@ -30,7 +32,8 @@ import numpy as np
 import pandas as pd
 
 from ..eval import availability
-from .sickle_m1 import MAX_LEAD, SEASON_START_MONTH
+from ..ingest.sickle import best_per_date
+from .sickle_m1 import LOOKBACK_D, MAX_LEAD, SEASON_START_MONTH, _s1_row, _s2_row
 
 ISSUE_WEEKDAY = 1  # Tuesday: CHIRPS preliminary and ERA5-Land for the past week are in by then
 HEADLINE_SEASON = "sep-feb"
@@ -85,4 +88,43 @@ def build(
     if len(out):
         assert (out.as_of < out.last_green).all(), "a row was issued after the field turned brown"
         assert (out.as_of.dt.day_of_week == ISSUE_WEEKDAY).all(), "an issue date is off the weekday"
+    return out
+
+
+def add_sensors(
+    rows: pd.DataFrame, s1: pd.DataFrame, s2: pd.DataFrame | None = None, passes: str = "DESCENDING"
+) -> pd.DataFrame:
+    """`rows` plus SICKLE's S1 (and S2) feature columns, from what was available on each `as_of`.
+
+    Rows are never dropped, unlike SICKLE's `build` (which needs 3 S1 scenes): every arm must be
+    scored on the same rows, so a row with too little history keeps NaN sensor features.
+    `passes` is the frozen headline (descending, EVALUATION.md §M2); `None` keeps all passes.
+    """
+    s1 = s1 if passes is None else s1[s1.orbit_pass == passes]
+    s1 = s1.assign(n_px=s1.groupby("field_id").n_valid.transform("max"))
+    by1 = {k: v.sort_values("date") for k, v in s1.groupby("field_id")}
+    by2 = {}
+    if s2 is not None:
+        clear = s2[s2.clear].dropna(subset=["ndvi", "ndwi", "mndwi"])
+        clear = best_per_date(clear.assign(unique_id=clear.field_id, edge_clipped=False))
+        by2 = {k: v for k, v in clear.groupby("field_id")}
+    win = pd.Timedelta(days=LOOKBACK_D)
+    feats = []
+    for r in rows.itertuples():
+        f = {}
+        h = by1.get(r.field_id)
+        if h is not None:
+            h = availability.visible(h[h.date > r.as_of - win], "s1", r.as_of)
+            if len(h) >= 3:  # SICKLE's minimum history for an S1 row
+                f.update(_s1_row(h, r.as_of))
+        if s2 is not None:
+            f["n_scenes_s2"] = 0
+            h2 = by2.get(r.field_id)
+            if h2 is not None:
+                h2 = availability.visible(h2[h2.date > r.as_of - win], "s2", r.as_of)
+                if len(h2):
+                    f.update(_s2_row(h2, r.as_of))
+        feats.append(f)
+    out = pd.concat([rows.reset_index(drop=True), pd.DataFrame(feats)], axis=1)
+    assert len(out) == len(rows), "a row was dropped or duplicated"
     return out

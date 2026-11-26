@@ -205,3 +205,25 @@ def test_pooled_intervals_never_read_a_later_issue_date():
     out, n_acc = C.pooled(df, poisoned)
     assert np.allclose(clean[~latest.to_numpy()], out[~latest.to_numpy()])
     assert n_acc.tolist() == [4, 3, 2, 1, 3, 2, 1]
+
+
+def test_odisha_sensor_features_ignore_scenes_not_yet_available():
+    """Poisoning every scene a row may not see (after as_of - lag) leaves its features unchanged."""
+    rows = pd.DataFrame(
+        {"field_id": ["f"] * 3, "as_of": pd.to_datetime(["2025-10-07", "2025-10-14", "2025-10-21"])}
+    )
+    d1 = pd.date_range("2025-06-01", "2025-12-31", freq="6D")
+    s1 = pd.DataFrame(
+        dict(field_id="f", date=d1, orbit_pass="DESCENDING", vv_db=-10.0, angle=40.0, n_valid=9)
+    ).assign(vh_db=np.linspace(-25, -15, len(d1)))
+    d2 = pd.date_range("2025-06-01", "2025-12-31", freq="5D")
+    s2 = pd.DataFrame(
+        dict(field_id="f", date=d2, scene=d2.astype(str), clear=True, n_clear=9)
+    ).assign(ndvi=np.linspace(0.2, 0.8, len(d2)), ndwi=0.0, mndwi=0.0)
+    clean = O.add_sensors(rows, s1, s2)
+    for r in rows.itertuples():
+        p1, p2 = s1.copy(), s2.copy()
+        p1.loc[A.available_on("s1", p1.date).to_numpy() > r.as_of, "vh_db"] = 99.0
+        p2.loc[A.available_on("s2", p2.date).to_numpy() > r.as_of, "ndvi"] = 99.0
+        got = O.add_sensors(rows.iloc[[r.Index]], p1, p2).iloc[0]
+        pd.testing.assert_series_equal(got, clean.iloc[r.Index], check_names=False)

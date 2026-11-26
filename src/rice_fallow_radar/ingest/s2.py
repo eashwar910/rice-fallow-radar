@@ -7,7 +7,12 @@ al. 2023), joined to each S2 scene by index: `cs_cdf` is the probability a pixel
 
 from __future__ import annotations
 
+import json
+
 import ee
+import pandas as pd
+
+from ..eval import availability
 
 S2 = "COPERNICUS/S2_SR_HARMONIZED"
 CS = "GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED"
@@ -46,6 +51,51 @@ def per_image(fc: ee.FeatureCollection, img: ee.Image, bands: list[str], scale: 
     date = img.date().format("YYYY-MM-dd")
     sid = img.get("system:index")
     return out.map(lambda f: f.setGeometry(None).set("date", date, "scene", sid))
+
+
+CS_CLEAR = 0.6  # Cloud Score+ cs_cdf at or above this: clear pixel (suggested cut)
+CLEAR_FRAC = 0.5  # same scene-level rule as SICKLE (`ingest.sickle.CLEAR_FRAC`)
+
+
+def _indices(img: ee.Image) -> ee.Image:
+    """NDVI/NDWI/MNDWI on clear pixels only, plus a 1-band `px` footprint to count pixels."""
+    clear = ee.Image(img.get("cs")).select("cs_cdf").gte(CS_CLEAR)
+    idx = ee.Image.cat(
+        img.normalizedDifference(["B8", "B4"]).rename("ndvi"),
+        img.normalizedDifference(["B3", "B8"]).rename("ndwi"),
+        img.normalizedDifference(["B3", "B11"]).rename("mndwi"),
+    ).updateMask(clear)
+    return idx.addBands(img.select("B4").gt(-1).rename("px")).copyProperties(
+        img, ["system:time_start", "system:index"]
+    )
+
+
+def series(fields, start: str, end: str, replay: bool = False, chunk: int = 40):
+    """One row per (field, scene) in SICKLE's S2 column names (`ingest.sickle.s2_series`).
+
+    Indices are field means over Cloud Score+-clear pixels; `n_clear` counts those, `n_px` the
+    whole footprint, and `clear` applies SICKLE's own scene rule (>= half the field clear). Cloud
+    masking differs (Cloud Score+ here, SCL + MSK_CLDPRB in SICKLE), which is a disclosed shift.
+    """
+    availability.check_cutoff([start, pd.Timestamp(end) - pd.Timedelta(days=1)], replay=replay)
+    frames = []
+    for i in range(0, len(fields), chunk):
+        sub = fields.iloc[i : i + chunk]
+        fc = ee.FeatureCollection(json.loads(sub[["field_id", "geometry"]].to_json()))
+        col = collection(ee.Geometry.Rectangle(list(sub.total_bounds)), start, end).map(_indices)
+        table = col.map(
+            lambda img, fc=fc: per_image(fc, img, ["ndvi", "ndwi", "mndwi", "px"])
+        ).flatten()
+        df = ee.data.computeFeatures({"expression": table, "fileFormat": "PANDAS_DATAFRAME"})
+        frames.append(df.drop(columns=[c for c in ("geo",) if c in df]))
+    s = pd.concat(frames, ignore_index=True)
+    s = s.rename(columns={f"{b}_mean": b for b in ("ndvi", "ndwi", "mndwi")})
+    s["date"] = pd.to_datetime(s.date)
+    s["n_px"], s["n_clear"] = s.px_count, s.ndvi_count
+    s = s[s.n_px > 0]  # scenes from MGRS tiles that do not cover the field
+    s["clear"] = (s.n_px > 0) & (s.n_clear >= CLEAR_FRAC * s.n_px)
+    keep = ["field_id", "date", "scene", "ndvi", "ndwi", "mndwi", "n_px", "n_clear", "clear"]
+    return s[keep].sort_values(["field_id", "date"], ignore_index=True)
 
 
 def chip_url(scenes: list[str], win: ee.Geometry, outline: ee.Geometry, px: int = CHIP_PX) -> str:
