@@ -756,3 +756,17 @@ in-sample there (built from this survey). Coverage is saturated for ±7 d labels
 M2 is done apart from the write-up. Integrated gradients is not applicable: there is no CNN
 (step 4 of P2 was never built). Open items are in OPEN_QUESTIONS (pseudo-label circularity,
 headline-rule choice). SICKLE locked unlock is still ~11 Dec (M1, not M2).
+
+## 27 Nov 2026: interim report draft
+
+`reports/interim_report_draft.md`: a working draft of the 3 Dec interim report (~7,400 body
+words, APA 7), written from this repo's docs and `runs/` CSVs as Eashwar's reference for the
+submitted version. Six figures are placeholders naming their source CSVs. Seven references
+were added beyond the proposal's list (Lundberg et al. 2020, Vovk 2012, Roberts et al. 2017,
+Olofsson et al. 2014, Kursa & Rudnicki 2010, Efron & Tibshirani 1993, Muñoz-Sabater et al. 2021)
+and need their details checking. The draft names label circularity (S2 labels, S2 pseudo-labels,
+S2 features; headline 4.9 d below the 6–9 d self-agreement floor) as the main threat to validity.
+
+### Next
+
+Interim figures; temporal CNN before the ~11 Dec SICKLE unlock.
